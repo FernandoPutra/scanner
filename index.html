@@ -2,48 +2,85 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <title>Auto Serial Scanner</title>
+  <title>Live Serial Scanner Pro</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Tesseract OCR -->
+  <!-- OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
-  <!-- SheetJS (Excel) -->
+  <!-- Excel -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #0f172a;
+      background: #020617;
       color: white;
-      padding: 20px;
+      padding: 10px;
       text-align: center;
     }
-    h2 { margin-bottom: 10px; }
-    input {
-      margin: 15px 0;
-      font-size: 16px;
+
+    .camera-wrapper {
+      position: relative;
     }
+
+    video {
+      width: 100%;
+      border-radius: 10px;
+    }
+
+    /* KOTAK DETEKSI */
+    .scan-box {
+      position: absolute;
+      top: 30%;
+      left: 10%;
+      width: 80%;
+      height: 20%;
+      border: 3px dashed #22c55e;
+      border-radius: 10px;
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+
     table {
       width: 100%;
-      margin-top: 15px;
+      margin-top: 10px;
       border-collapse: collapse;
+      font-size: 13px;
     }
+
     th, td {
       border: 1px solid #334155;
-      padding: 8px;
+      padding: 5px;
     }
+
     th {
       background: #1e293b;
+    }
+
+    button {
+      margin-top: 10px;
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      background: #22c55e;
+      color: black;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
 
-<h2>📷 Auto Scan Nomor Seri</h2>
-<p>Scan langsung → tersimpan otomatis</p>
+<h3>📷 Live Scan Nomor Seri</h3>
+<p>Arahkan nomor seri ke kotak hijau</p>
 
-<input type="file" accept="image/*" capture="environment" id="cameraInput" />
+<div class="camera-wrapper">
+  <video id="video" autoplay playsinline></video>
+  <div class="scan-box"></div>
+</div>
+
+<canvas id="canvas" hidden></canvas>
 
 <table>
   <thead>
@@ -56,48 +93,85 @@
   <tbody id="tableBody"></tbody>
 </table>
 
-<br />
 <button onclick="downloadExcel()">⬇️ Download Excel</button>
+
+<!-- BEEP SOUND -->
+<audio id="beep">
+  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg">
+</audio>
 
 <script>
 let data = [];
 let counter = 1;
+let busy = false;
 
-document.getElementById("cameraInput").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const beep = document.getElementById("beep");
 
-  const result = await Tesseract.recognize(file, "eng");
+// AKSES KAMERA BELAKANG
+navigator.mediaDevices.getUserMedia({
+  video: { facingMode: "environment" }
+}).then(stream => {
+  video.srcObject = stream;
+  setInterval(scanArea, 1500); // 🚀 LEBIH CEPAT
+}).catch(() => alert("Tidak bisa mengakses kamera"));
 
-  const text = result.data.text;
+// SCAN AREA SAJA
+function scanArea() {
+  if (busy || video.videoWidth === 0) return;
+  busy = true;
 
-  // AUTO-DETECT SERIAL (angka / kombinasi huruf-angka)
-  const match = text.match(/[A-Z0-9\/\-]{4,}/g);
-  if (!match) return;
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
 
-  match.forEach(serial => {
-    if (data.some(d => d.serial === serial)) return; // anti-duplikat
+  // Area sesuai kotak deteksi
+  const sx = vw * 0.1;
+  const sy = vh * 0.3;
+  const sw = vw * 0.8;
+  const sh = vh * 0.2;
 
-    const time = new Date().toLocaleString("id-ID");
+  canvas.width = sw;
+  canvas.height = sh;
 
-    data.push({
-      no: counter++,
-      serial,
-      time
-    });
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
 
-    const row = `
-      <tr>
-        <td>${counter - 1}</td>
-        <td>${serial}</td>
-        <td>${time}</td>
-      </tr>`;
-    document.getElementById("tableBody").insertAdjacentHTML("beforeend", row);
+  Tesseract.recognize(canvas, "eng", {
+    tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/"
+  }).then(({ data: ocr }) => {
+
+    const matches = ocr.text.match(/[A-Z0-9\-\/]{4,}/g);
+
+    if (matches) {
+      matches.forEach(serial => {
+        if (data.some(d => d.serial === serial)) return;
+
+        const time = new Date().toLocaleString("id-ID");
+
+        data.push({
+          no: counter++,
+          serial,
+          time
+        });
+
+        document.getElementById("tableBody").insertAdjacentHTML("beforeend", `
+          <tr>
+            <td>${counter - 1}</td>
+            <td>${serial}</td>
+            <td>${time}</td>
+          </tr>
+        `);
+
+        beep.play(); // 🔊 BEEP SAAT SUKSES
+      });
+    }
+
+    busy = false;
   });
+}
 
-  e.target.value = ""; // reset input → siap scan berikutnya
-});
-
+// EXCEL
 function downloadExcel() {
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
