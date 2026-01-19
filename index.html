@@ -1,182 +1,269 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <title>Live Serial Scanner Pro</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<title>Serial Scanner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- OCR -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <!-- Excel -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #020617;
-      color: white;
-      padding: 10px;
-      text-align: center;
-    }
+<style>
+body{
+  margin:0;
+  font-family:system-ui,Arial;
+  background:#020617;
+  color:white;
+  padding:12px;
+}
+h2{margin:6px 0}
+small{color:#94a3b8}
 
-    .camera-wrapper {
-      position: relative;
-    }
+.camera{
+  position:relative;
+}
+video{
+  width:100%;
+  height:55vh;
+  object-fit:cover;
+  border-radius:16px;
+}
+.scan-box{
+  position:absolute;
+  top:40%;
+  left:10%;
+  width:80%;
+  height:15%;
+  border:3px dashed #22c55e;
+  border-radius:12px;
+}
 
-    video {
-      width: 100%;
-      border-radius: 10px;
-    }
+.card{
+  background:#0f172a;
+  border-radius:14px;
+  padding:12px;
+  margin-top:10px;
+}
 
-    /* KOTAK DETEKSI */
-    .scan-box {
-      position: absolute;
-      top: 30%;
-      left: 10%;
-      width: 80%;
-      height: 20%;
-      border: 3px dashed #22c55e;
-      border-radius: 10px;
-      box-sizing: border-box;
-      pointer-events: none;
-    }
+input{
+  width:100%;
+  font-size:22px;
+  padding:10px;
+  border-radius:10px;
+  border:2px solid #22c55e;
+  text-align:center;
+  letter-spacing:3px;
+  text-transform:uppercase;
+}
 
-    table {
-      width: 100%;
-      margin-top: 10px;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
+button{
+  width:100%;
+  padding:12px;
+  margin-top:8px;
+  border:none;
+  border-radius:10px;
+  font-weight:700;
+  font-size:15px;
+}
 
-    th, td {
-      border: 1px solid #334155;
-      padding: 5px;
-    }
+.save{background:#22c55e;color:black}
+.retry{background:#facc15;color:black}
+.manual{background:#38bdf8;color:black}
 
-    th {
-      background: #1e293b;
-    }
+.stats{
+  display:flex;
+  gap:6px;
+  margin-top:10px;
+}
+.stats div{
+  flex:1;
+  background:#1e293b;
+  border-radius:10px;
+  padding:8px;
+  text-align:center;
+  font-size:13px;
+}
 
-    button {
-      margin-top: 10px;
-      width: 100%;
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 8px;
-      border: none;
-      background: #22c55e;
-      color: black;
-      font-weight: bold;
-    }
-  </style>
+table{
+  width:100%;
+  margin-top:12px;
+  border-collapse:collapse;
+  font-size:12px;
+}
+th,td{
+  border:1px solid #334155;
+  padding:6px;
+}
+th{background:#1e293b}
+
+.valid{
+  border:2px solid #22c55e!important;
+  background:#dcfce7;
+  color:#14532d;
+}
+.invalid{
+  border:2px solid #ef4444!important;
+  background:#fee2e2;
+  color:#7f1d1d;
+}
+.locked{opacity:0.7}
+</style>
 </head>
+
 <body>
 
-<h3>📷 Live Scan Nomor Seri</h3>
-<p>Arahkan nomor seri ke kotak hijau</p>
+<h2>📷 Scan Nomor Seri</h2>
+<small>Format: HURUF + 10 ANGKA (11 karakter)</small>
 
-<div class="camera-wrapper">
+<div class="camera">
   <video id="video" autoplay playsinline></video>
   <div class="scan-box"></div>
 </div>
 
 <canvas id="canvas" hidden></canvas>
 
+<div class="card" id="result" style="display:none">
+  <small>Hasil scan (bisa diedit)</small>
+  <input id="serialInput" maxlength="11">
+  <button class="save" onclick="save()">✔ Simpan</button>
+  <button class="manual" onclick="editManual()">✍️ Edit Manual</button>
+  <button class="retry" onclick="retry()">🔄 Scan Ulang</button>
+</div>
+
+<div class="stats">
+  <div>📊 Total<br><b id="total">0</b></div>
+  <div>✅ Valid<br><b id="valid">0</b></div>
+  <div>❌ Invalid<br><b id="invalid">0</b></div>
+</div>
+
 <table>
-  <thead>
-    <tr>
-      <th>No</th>
-      <th>Nomor Seri</th>
-      <th>Waktu</th>
-    </tr>
-  </thead>
-  <tbody id="tableBody"></tbody>
+<thead>
+<tr>
+<th>No</th>
+<th>Serial</th>
+<th>Status</th>
+<th>Waktu</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
 </table>
 
-<button onclick="downloadExcel()">⬇️ Download Excel</button>
-
-<!-- BEEP SOUND -->
-<audio id="beep">
-  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg">
-</audio>
+<button onclick="download()">⬇️ Download Excel</button>
 
 <script>
-let data = [];
-let counter = 1;
-let busy = false;
+let data=[],no=1;
+let stat={total:0,valid:0,invalid:0};
+let scanning=false,current=null;
 
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-const beep = document.getElementById("beep");
+const video=document.getElementById("video");
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+const input=document.getElementById("serialInput");
 
-// AKSES KAMERA BELAKANG
 navigator.mediaDevices.getUserMedia({
-  video: { facingMode: "environment" }
-}).then(stream => {
-  video.srcObject = stream;
-  setInterval(scanArea, 1500); // 🚀 LEBIH CEPAT
-}).catch(() => alert("Tidak bisa mengakses kamera"));
+  video:{facingMode:"environment"}
+}).then(s=>video.srcObject=s);
 
-// SCAN AREA SAJA
-function scanArea() {
-  if (busy || video.videoWidth === 0) return;
-  busy = true;
+// normalisasi OCR
+function normalize(t){
+  return t.toUpperCase()
+    .replace(/O/g,'0')
+    .replace(/[IL]/g,'1')
+    .replace(/S/g,'5')
+    .replace(/Z/g,'2')
+    .replace(/[^A-Z0-9]/g,'');
+}
 
-  const vw = video.videoWidth;
-  const vh = video.videoHeight;
+// validasi HURUF + 10 ANGKA
+function validSerial(s){
+  return /^[A-Z]\d{10}$/.test(s);
+}
 
-  // Area sesuai kotak deteksi
-  const sx = vw * 0.1;
-  const sy = vh * 0.3;
-  const sw = vw * 0.8;
-  const sh = vh * 0.2;
+// scan periodik (tidak auto simpan)
+function scan(){
+  if(scanning || current) return;
+  scanning=true;
 
-  canvas.width = sw;
-  canvas.height = sh;
+  const vw=video.videoWidth, vh=video.videoHeight;
+  const sx=vw*0.1, sy=vh*0.4, sw=vw*0.8, sh=vh*0.15;
 
-  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+  canvas.width=sw;
+  canvas.height=sh;
+  ctx.drawImage(video,sx,sy,sw,sh,0,0,sw,sh);
 
-  Tesseract.recognize(canvas, "eng", {
-    tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/"
-  }).then(({ data: ocr }) => {
-
-    const matches = ocr.text.match(/[A-Z0-9\-\/]{4,}/g);
-
-    if (matches) {
-      matches.forEach(serial => {
-        if (data.some(d => d.serial === serial)) return;
-
-        const time = new Date().toLocaleString("id-ID");
-
-        data.push({
-          no: counter++,
-          serial,
-          time
-        });
-
-        document.getElementById("tableBody").insertAdjacentHTML("beforeend", `
-          <tr>
-            <td>${counter - 1}</td>
-            <td>${serial}</td>
-            <td>${time}</td>
-          </tr>
-        `);
-
-        beep.play(); // 🔊 BEEP SAAT SUKSES
-      });
+  Tesseract.recognize(canvas,"eng",{
+    tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  }).then(({data:o})=>{
+    const cleaned=normalize(o.text);
+    const match=cleaned.match(/[A-Z]\d{10}/);
+    if(match){
+      current=match[0];
+      input.value=current;
+      result.style.display="block";
     }
-
-    busy = false;
+    scanning=false;
   });
 }
 
-// EXCEL
-function downloadExcel() {
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Data Serial");
-  XLSX.writeFile(wb, "data-serial.xlsx");
+setInterval(scan,2000);
+
+// simpan data
+function save(){
+  const v=input.value.toUpperCase();
+  stat.total++;
+
+  const ok=validSerial(v);
+  ok?stat.valid++:stat.invalid++;
+
+  input.classList.remove("valid","invalid");
+  input.classList.add(ok?"valid":"invalid");
+  input.disabled=true;
+  input.classList.add("locked");
+
+  data.push({
+    No:no,
+    Serial:v,
+    Status:ok?"VALID":"INVALID",
+    Waktu:new Date().toLocaleString("id-ID")
+  });
+
+  tbody.insertAdjacentHTML("beforeend",`
+    <tr style="background:${ok?'#052e16':'#450a0a'}">
+      <td>${no}</td>
+      <td>${v}</td>
+      <td>${ok?'✅ VALID':'❌ INVALID'}</td>
+      <td>${new Date().toLocaleString("id-ID")}</td>
+    </tr>
+  `);
+
+  no++;
+  updateStat();
+}
+
+function retry(){
+  current=null;
+  result.style.display="none";
+  input.disabled=false;
+  input.value="";
+  input.classList.remove("valid","invalid","locked");
+}
+
+function editManual(){
+  input.disabled=false;
+  input.focus();
+}
+
+function updateStat(){
+  total.textContent=stat.total;
+  valid.textContent=stat.valid;
+  invalid.textContent=stat.invalid;
+}
+
+function download(){
+  const ws=XLSX.utils.json_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Serial");
+  XLSX.writeFile(wb,"serial-scan.xlsx");
 }
 </script>
 
