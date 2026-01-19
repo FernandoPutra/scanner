@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Auto Serial Scanner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Tesseract OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <!-- SheetJS (Excel) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    h2 { margin-bottom: 10px; }
+    input {
+      margin: 15px 0;
+      font-size: 16px;
+    }
+    table {
+      width: 100%;
+      margin-top: 15px;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #334155;
+      padding: 8px;
+    }
+    th {
+      background: #1e293b;
+    }
+  </style>
+</head>
+<body>
+
+<h2>📷 Auto Scan Nomor Seri</h2>
+<p>Scan langsung → tersimpan otomatis</p>
+
+<input type="file" accept="image/*" capture="environment" id="cameraInput" />
+
+<table>
+  <thead>
+    <tr>
+      <th>No</th>
+      <th>Nomor Seri</th>
+      <th>Waktu</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+</table>
+
+<br />
+<button onclick="downloadExcel()">⬇️ Download Excel</button>
+
+<script>
+let data = [];
+let counter = 1;
+
+document.getElementById("cameraInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const result = await Tesseract.recognize(file, "eng");
+
+  const text = result.data.text;
+
+  // AUTO-DETECT SERIAL (angka / kombinasi huruf-angka)
+  const match = text.match(/[A-Z0-9\/\-]{4,}/g);
+  if (!match) return;
+
+  match.forEach(serial => {
+    if (data.some(d => d.serial === serial)) return; // anti-duplikat
+
+    const time = new Date().toLocaleString("id-ID");
+
+    data.push({
+      no: counter++,
+      serial,
+      time
+    });
+
+    const row = `
+      <tr>
+        <td>${counter - 1}</td>
+        <td>${serial}</td>
+        <td>${time}</td>
+      </tr>`;
+    document.getElementById("tableBody").insertAdjacentHTML("beforeend", row);
+  });
+
+  e.target.value = ""; // reset input → siap scan berikutnya
+});
+
+function downloadExcel() {
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Data Serial");
+  XLSX.writeFile(wb, "data-serial.xlsx");
+}
+</script>
+
+</body>
+</html>
