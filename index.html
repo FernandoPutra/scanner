@@ -64,6 +64,7 @@ button{
   font-size:15px;
 }
 
+.start{background:#22c55e;color:black}
 .save{background:#22c55e;color:black}
 .retry{background:#facc15;color:black}
 .manual{background:#38bdf8;color:black}
@@ -113,8 +114,10 @@ th{background:#1e293b}
 <h2>📷 Scan Nomor Seri</h2>
 <small>Format: HURUF + 10 ANGKA (11 karakter)</small>
 
+<button class="start" onclick="startCamera()">▶️ Aktifkan Kamera</button>
+
 <div class="camera">
-  <video id="video" autoplay playsinline></video>
+  <video id="video" muted playsinline></video>
   <div class="scan-box"></div>
 </div>
 
@@ -149,20 +152,29 @@ th{background:#1e293b}
 <button onclick="download()">⬇️ Download Excel</button>
 
 <script>
-let data=[],no=1;
+let data=[], no=1;
 let stat={total:0,valid:0,invalid:0};
-let scanning=false,current=null;
+let scanning=false, current=null;
 
 const video=document.getElementById("video");
 const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
 const input=document.getElementById("serialInput");
+const result=document.getElementById("result");
 
-navigator.mediaDevices.getUserMedia({
-  video:{facingMode:"environment"}
-}).then(s=>video.srcObject=s);
+// ==== START CAMERA (WAJIB USER GESTURE) ====
+function startCamera(){
+  navigator.mediaDevices.getUserMedia({
+    video:{ facingMode:{ ideal:"environment" } }
+  }).then(stream=>{
+    video.srcObject=stream;
+    video.play();
+  }).catch(e=>{
+    alert("Kamera tidak bisa diakses: "+e.message);
+  });
+}
 
-// normalisasi OCR
+// ==== OCR OPTIMIZED ====
 function normalize(t){
   return t.toUpperCase()
     .replace(/O/g,'0')
@@ -172,14 +184,13 @@ function normalize(t){
     .replace(/[^A-Z0-9]/g,'');
 }
 
-// validasi HURUF + 10 ANGKA
 function validSerial(s){
   return /^[A-Z]\d{10}$/.test(s);
 }
 
-// scan periodik
-function scan(){
-  if(scanning || current) return;
+// scan tiap 2 detik (ringan)
+async function scan(){
+  if(scanning || current || video.readyState!==4) return;
   scanning=true;
 
   const vw=video.videoWidth, vh=video.videoHeight;
@@ -189,22 +200,24 @@ function scan(){
   canvas.height=sh;
   ctx.drawImage(video,sx,sy,sw,sh,0,0,sw,sh);
 
-  Tesseract.recognize(canvas,"eng",{
-    tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-  }).then(({data:o})=>{
-    const cleaned=normalize(o.text);
-    const match=cleaned.match(/[A-Z]\d{10}/);
-    if(match){
-      current=match[0];
-      input.value=current;
-      result.style.display="block";
-    }
-    scanning=false;
+  const { data:o } = await Tesseract.recognize(canvas,"eng",{
+    tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+    tessedit_pageseg_mode:6
   });
+
+  const cleaned=normalize(o.text);
+  const match=cleaned.match(/[A-Z]\d{10}/);
+  if(match){
+    current=match[0];
+    input.value=current;
+    result.style.display="block";
+  }
+  scanning=false;
 }
+
 setInterval(scan,2000);
 
-// simpan data
+// ==== SAVE ====
 function save(){
   const v=input.value.toUpperCase();
   stat.total++;
@@ -213,23 +226,19 @@ function save(){
   ok?stat.valid++:stat.invalid++;
 
   input.classList.remove("valid","invalid");
-  input.classList.add(ok?"valid":"invalid");
+  input.classList.add(ok?"valid":"invalid","locked");
   input.disabled=true;
-  input.classList.add("locked");
 
-  data.push({
-    No:no,
-    Serial:v,
-    Status:ok?"VALID":"INVALID",
-    Waktu:new Date().toLocaleString("id-ID")
-  });
+  const waktu=new Date().toLocaleString("id-ID");
+
+  data.push({No:no,Serial:v,Status:ok?"VALID":"INVALID",Waktu:waktu});
 
   tbody.insertAdjacentHTML("beforeend",`
     <tr style="background:${ok?'#052e16':'#450a0a'}">
       <td>${no}</td>
       <td>${v}</td>
       <td>${ok?'✅ VALID':'❌ INVALID'}</td>
-      <td>${new Date().toLocaleString("id-ID")}</td>
+      <td>${waktu}</td>
     </tr>
   `);
 
@@ -256,38 +265,29 @@ function updateStat(){
   invalid.textContent=stat.invalid;
 }
 
-/* =========================
-   DOWNLOAD EXCEL (REKAP)
-   ========================= */
+// ==== EXCEL FORMAT REKAPITULASI ====
 function download(){
+  const bulan="September";
+  const tahun="2022";
+  const lokasi="Bakauheni";
 
-  const bulan = "September";
-  const tahun = "2022";
-  const lokasi = "Bakauheni";
+  const serialGabung=data.map(d=>d.Serial).join(",");
 
-  const serialGabung = data.map(d => d.Serial).join(",");
-
-  const ws = XLSX.utils.aoa_to_sheet([
+  const ws=XLSX.utils.aoa_to_sheet([
     ["Rekapitulasi Arsip"],
     [],
-    [`Bulan : ${bulan}`, `Tahun : ${tahun}`, lokasi],
+    [`Bulan : ${bulan}`,`Tahun : ${tahun}`,lokasi],
     [],
-    ["Keterangan", "Nomor Seri"],
-    ["KI-D2", serialGabung]
+    ["Keterangan","Nomor Seri"],
+    ["KI-D2",serialGabung]
   ]);
 
-  ws["!merges"] = [
-    { s:{r:0,c:0}, e:{r:0,c:1} }
-  ];
+  ws["!merges"]=[{s:{r:0,c:0},e:{r:0,c:1}}];
+  ws["!cols"]=[{wch:20},{wch:100}];
 
-  ws["!cols"] = [
-    { wch:20 },
-    { wch:100 }
-  ];
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Rekapitulasi Arsip");
-  XLSX.writeFile(wb, "Rekapitulasi_Arsip.xlsx");
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Rekapitulasi Arsip");
+  XLSX.writeFile(wb,"Rekapitulasi_Arsip.xlsx");
 }
 </script>
 
