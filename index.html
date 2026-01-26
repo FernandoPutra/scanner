@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Serial Scanner</title>
+<title>Serial Scanner PRO</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -15,7 +15,7 @@ body{
   background:#020617;
   color:white;
   padding:12px;
-  padding-bottom:80px;
+  padding-bottom:90px;
 }
 h2{margin:6px 0}
 small{color:#94a3b8}
@@ -40,21 +40,19 @@ video{
   height:15%;
   border:3px dashed #22c55e;
   border-radius:12px;
-  box-shadow:0 0 0 99999px rgba(0,0,0,0.5);
+  box-shadow:0 0 0 99999px rgba(0,0,0,0.55);
   pointer-events:none;
 }
-
 .scan-status{
   position:absolute;
   bottom:20px;
   left:50%;
   transform:translateX(-50%);
-  background:rgba(0,0,0,0.8);
-  padding:10px 20px;
+  background:rgba(0,0,0,0.85);
+  padding:10px 18px;
   border-radius:20px;
   font-size:14px;
   font-weight:700;
-  display:none;
 }
 
 .card{
@@ -74,14 +72,8 @@ input{
   text-align:center;
   letter-spacing:3px;
   text-transform:uppercase;
-  box-sizing:border-box;
   background:#0f172a;
   color:white;
-}
-input:focus{
-  outline:none;
-  border-color:#10b981;
-  box-shadow:0 0 0 3px rgba(34,197,94,0.2);
 }
 
 button{
@@ -91,19 +83,13 @@ button{
   border:none;
   border-radius:10px;
   font-weight:700;
-  font-size:15px;
   cursor:pointer;
-  transition:all 0.2s;
 }
-button:active{
-  transform:scale(0.98);
-}
-
-.start{background:#22c55e;color:black}
-.save{background:#22c55e;color:black}
-.retry{background:#facc15;color:black}
-.manual{background:#38bdf8;color:black}
-.download{background:#8b5cf6;color:white;margin-top:12px}
+.start,.save{background:#22c55e;color:black}
+.retry{background:#facc15}
+.manual{background:#38bdf8}
+.download{background:#8b5cf6;color:white;margin-top:14px}
+.mode{background:#1e293b;color:white}
 
 .stats{
   display:flex;
@@ -114,25 +100,19 @@ button:active{
   flex:1;
   background:#1e293b;
   border-radius:10px;
-  padding:10px 8px;
+  padding:10px;
   text-align:center;
-  font-size:13px;
   border:2px solid #334155;
 }
-.stats b{
-  display:block;
-  font-size:22px;
-  margin-top:4px;
-}
+.stats b{font-size:22px}
 
 .table-container{
   overflow-x:auto;
   margin-top:12px;
-  border-radius:10px;
   background:#0f172a;
+  border-radius:10px;
   border:2px solid #1e293b;
 }
-
 table{
   width:100%;
   border-collapse:collapse;
@@ -140,462 +120,206 @@ table{
 }
 th,td{
   border:1px solid #334155;
-  padding:8px 6px;
-  text-align:left;
+  padding:8px;
 }
-th{
-  background:#1e293b;
-  position:sticky;
-  top:0;
-  font-weight:700;
-}
-tbody tr:hover{
-  background:#1e293b;
-}
+th{background:#1e293b}
 
-.valid{
-  border:2px solid #22c55e!important;
-  background:#dcfce7!important;
-  color:#14532d!important;
-}
-.invalid{
-  border:2px solid #ef4444!important;
-  background:#fee2e2!important;
-  color:#7f1d1d!important;
-}
-.locked{
-  opacity:0.8;
-  pointer-events:none;
-}
+.valid{background:#dcfce7;color:#14532d}
+.invalid{background:#fee2e2;color:#7f1d1d}
 
-.btn-group{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:8px;
-}
-
-/* Loading animation */
-@keyframes scan{
-  0%,100%{opacity:1}
-  50%{opacity:0.3}
-}
-.scanning{
-  animation:scan 1.5s infinite;
-}
-
-.hidden{display:none!important}
+@keyframes scan{0%,100%{opacity:1}50%{opacity:.3}}
+.scanning{animation:scan 1.4s infinite}
 </style>
 </head>
 
 <body>
 
 <h2>📷 Scan Nomor Seri</h2>
-<small>Format: HURUF + 10 ANGKA (11 karakter)</small>
+<small>Format: 1 Huruf + 10 Angka</small>
 
-<button class="start" id="startBtn" onclick="startCamera()">▶️ Aktifkan Kamera</button>
+<button class="start" onclick="startCamera()">▶ Aktifkan Kamera</button>
+<button class="mode" onclick="toggleMode()">⚙ Mode: <span id="modeText">ACCURATE</span></button>
 
-<div class="camera" id="cameraContainer" style="display:none">
-  <video id="video" muted playsinline></video>
-  <div class="scan-box" id="scanBox"></div>
-  <div class="scan-status" id="scanStatus">🔍 Scanning...</div>
+<div class="camera" id="camera" style="display:none">
+  <video id="video" playsinline muted></video>
+  <div class="scan-box"></div>
+  <div class="scan-status" id="status">🔍 Scanning...</div>
 </div>
 
 <canvas id="canvas" hidden></canvas>
 
 <div class="card" id="result" style="display:none">
-  <small>Hasil scan (bisa diedit)</small>
-  <input id="serialInput" maxlength="11" placeholder="Masukkan nomor seri">
+  <input id="serial" maxlength="11">
   <button class="save" onclick="save()">✔ Simpan</button>
-  <div class="btn-group">
-    <button class="manual" onclick="editManual()">✍️ Edit</button>
-    <button class="retry" onclick="retry()">🔄 Scan Ulang</button>
-  </div>
+  <button class="retry" onclick="retry()">🔄 Scan Ulang</button>
+  <button class="manual" onclick="edit()">✍ Edit Manual</button>
 </div>
 
 <div class="stats">
-  <div>📊 Total<br><b id="total">0</b></div>
-  <div>✅ Valid<br><b id="valid">0</b></div>
-  <div>❌ Invalid<br><b id="invalid">0</b></div>
+  <div>Total<b id="t">0</b></div>
+  <div>Valid<b id="v">0</b></div>
+  <div>Invalid<b id="i">0</b></div>
 </div>
 
 <div class="table-container">
-  <table>
-    <thead>
-      <tr>
-        <th style="width:50px">No</th>
-        <th>Serial</th>
-        <th style="width:80px">Status</th>
-        <th style="width:120px">Waktu</th>
-      </tr>
-    </thead>
-    <tbody id="tbody">
-      <tr>
-        <td colspan="4" style="text-align:center;color:#64748b;padding:20px">
-          Belum ada data scan
-        </td>
-      </tr>
-    </tbody>
-  </table>
+<table>
+<thead><tr><th>No</th><th>Serial</th><th>Status</th><th>Waktu</th></tr></thead>
+<tbody id="tbody"><tr><td colspan="4" align="center">Belum ada data</td></tr></tbody>
+</table>
 </div>
 
-<button class="download" onclick="download()">⬇️ Download Excel</button>
+<button class="download" onclick="download()">⬇ Download Excel</button>
 
 <script>
-// ===== DATA STORAGE =====
-let data = JSON.parse(localStorage.getItem('scanData')) || [];
-let no = data.length + 1;
-let stat = {
-  total: data.length,
-  valid: data.filter(d => d.Status === 'VALID').length,
-  invalid: data.filter(d => d.Status === 'INVALID').length
+// ================= GLOBAL =================
+let SCAN_MODE="ACCURATE";
+let scanBuffer={}, scanCount=0;
+const MAX_FAST=2, MAX_ACC=4;
+
+let data=JSON.parse(localStorage.getItem("scanData"))||[];
+let no=data.length+1;
+let stat={
+  total:data.length,
+  valid:data.filter(d=>d.Status==="VALID").length,
+  invalid:data.filter(d=>d.Status==="INVALID").length
 };
 
-let scanning = false;
-let current = null;
-let stream = null;
+let stream, scanning=false, current=null;
+const video=document.getElementById("video");
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+const status=document.getElementById("status");
 
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-const input = document.getElementById("serialInput");
-const result = document.getElementById("result");
-const scanBox = document.getElementById("scanBox");
-const scanStatus = document.getElementById("scanStatus");
-const cameraContainer = document.getElementById("cameraContainer");
-const startBtn = document.getElementById("startBtn");
-
-// ===== LOAD DATA ON PAGE LOAD =====
-window.addEventListener('load', () => {
-  renderTable();
-  updateStat();
-});
-
-// ===== START CAMERA =====
-async function startCamera() {
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { 
-        facingMode: { ideal: "environment" },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
-      }
-    });
-    
-    video.srcObject = stream;
-    await video.play();
-    
-    cameraContainer.style.display = 'block';
-    startBtn.style.display = 'none';
-    scanStatus.style.display = 'block';
-    
-    // Start auto scan
-    autoScan();
-    
-  } catch (e) {
-    alert("❌ Kamera tidak bisa diakses: " + e.message + "\n\nPastikan:\n1. Izinkan akses kamera\n2. Gunakan HTTPS atau localhost\n3. Kamera tidak digunakan aplikasi lain");
-  }
-}
-
-// ===== STOP CAMERA =====
-function stopCamera() {
-  if (stream) {
-    stream.getTracks().forEach(track => track.stop());
-    video.srcObject = null;
-  }
-  cameraContainer.style.display = 'none';
-  startBtn.style.display = 'block';
-  scanStatus.style.display = 'none';
-}
-
-// ===== OCR NORMALIZE =====
-function normalize(t) {
+// ================= UTIL =================
+function normalize(t){
   return t.toUpperCase()
-    .replace(/O/g, '0')
-    .replace(/[IL]/g, '1')
-    .replace(/S/g, '5')
-    .replace(/Z/g, '2')
-    .replace(/B/g, '8')
-    .replace(/[^A-Z0-9]/g, '');
+  .replace(/O/g,"0").replace(/[IL]/g,"1")
+  .replace(/S/g,"5").replace(/B/g,"8")
+  .replace(/[^A-Z0-9]/g,"");
+}
+function validSerial(s){return /^[A-Z]\d{10}$/.test(s);}
+
+// ================= MODE =================
+function toggleMode(){
+  SCAN_MODE=SCAN_MODE==="FAST"?"ACCURATE":"FAST";
+  document.getElementById("modeText").textContent=SCAN_MODE;
 }
 
-function validSerial(s) {
-  return /^[A-Z]\d{10}$/.test(s);
+// ================= CAMERA =================
+async function startCamera(){
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+  video.srcObject=stream;
+  await video.play();
+  document.getElementById("camera").style.display="block";
+  autoScan();
+}
+function stopCamera(){
+  stream?.getTracks().forEach(t=>t.stop());
 }
 
-// ===== AUTO SCAN =====
-let scanInterval;
-function autoScan() {
-  scanInterval = setInterval(async () => {
-    if (!scanning && !current && video.readyState === 4) {
-      await scan();
-    }
-  }, 2000); // Scan tiap 2 detik
-}
-
-// ===== SCAN FUNCTION (FIXED) =====
-async function scan() {
-  scanning = true;
-  scanBox.classList.add('scanning');
-  scanStatus.textContent = '🔍 Scanning...';
-  
-  try {
-    const vw = video.videoWidth;
-    const vh = video.videoHeight;
-    
-    // Crop area (scan box region)
-    const sx = vw * 0.1;
-    const sy = vh * 0.4;
-    const sw = vw * 0.8;
-    const sh = vh * 0.15;
-    
-    canvas.width = sw;
-    canvas.height = sh;
-    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
-    
-    // OCR with optimized settings
-    const { data: { text } } = await Tesseract.recognize(canvas, "eng", {
-      tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-      tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE,
-      logger: () => {} // Suppress logs
-    });
-    
-    const cleaned = normalize(text);
-    const match = cleaned.match(/[A-Z]\d{10}/);
-    
-    if (match) {
-      current = match[0];
-      input.value = current;
-      result.style.display = "block";
-      scanStatus.textContent = '✅ Serial terdeteksi!';
-      scanStatus.style.background = 'rgba(34,197,94,0.9)';
-      
-      // Stop auto scan when found
-      clearInterval(scanInterval);
-      stopCamera();
-      
-      // Vibrate if supported
-      if (navigator.vibrate) {
-        navigator.vibrate(200);
-      }
-    } else {
-      scanStatus.textContent = '⚠️ Tidak terdeteksi, coba lagi...';
-      scanStatus.style.background = 'rgba(0,0,0,0.8)';
-    }
-    
-  } catch (error) {
-    console.error('Scan error:', error);
-    scanStatus.textContent = '❌ Error scan';
+// ================= PREPROCESS =================
+function preprocess(ctx,w,h){
+  const img=ctx.getImageData(0,0,w,h);
+  const d=img.data;
+  let min=255,max=0;
+  for(let i=0;i<d.length;i+=4){
+    let g=d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114;
+    d[i]=d[i+1]=d[i+2]=g;
+    min=Math.min(min,g);max=Math.max(max,g);
   }
-  
-  scanBox.classList.remove('scanning');
-  scanning = false;
+  let s=255/(max-min||1);
+  for(let i=0;i<d.length;i+=4){
+    let v=(d[i]-min)*s;
+    d[i]=d[i+1]=d[i+2]=v>140?255:0;
+  }
+  ctx.putImageData(img,0,0);
+}
+function isBlurry(ctx,w,h){
+  const d=ctx.getImageData(0,0,w,h).data;
+  let m=0,c=0;
+  for(let i=0;i<d.length;i+=4){m+=d[i];c++}
+  m/=c;
+  let v=0;
+  for(let i=0;i<d.length;i+=4)v+=(d[i]-m)**2;
+  return v/c<120;
 }
 
-// ===== SAVE (FIXED & IMPROVED) =====
-function save() {
-  const v = input.value.toUpperCase().trim();
-  
-  if (!v) {
-    alert('❌ Nomor seri tidak boleh kosong!');
-    return;
-  }
-  
-  if (v.length !== 11) {
-    alert('⚠️ Nomor seri harus 11 karakter!');
-    return;
-  }
-  
-  const ok = validSerial(v);
-  
-  // Visual feedback
-  input.classList.remove("valid", "invalid");
-  input.classList.add(ok ? "valid" : "invalid", "locked");
-  input.disabled = true;
-  
-  const waktu = new Date().toLocaleString("id-ID", {
-    day: '2-digit',
-    month: '2-digit', 
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+// ================= OCR =================
+let interval;
+function autoScan(){
+  interval=setInterval(()=>!scanning&&scan(),1500);
+}
+
+async function scan(){
+  scanning=true;
+  const vw=video.videoWidth,vh=video.videoHeight;
+  const sx=vw*0.1, sy=vh*0.4, sw=vw*0.8, sh=vh*0.15;
+  canvas.width=sw; canvas.height=sh;
+  ctx.drawImage(video,sx,sy,sw,sh,0,0,sw,sh);
+
+  if(isBlurry(ctx,sw,sh)){scanning=false;return;}
+  preprocess(ctx,sw,sh);
+
+  const {data}=await Tesseract.recognize(canvas,"eng",{
+    tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+    tessedit_pageseg_mode:Tesseract.PSM.SINGLE_LINE,
+    logger:()=>{}
   });
-  
-  const newData = {
-    No: no,
-    Serial: v,
-    Status: ok ? "VALID" : "INVALID",
-    Waktu: waktu
-  };
-  
-  data.push(newData);
-  
-  // Save to localStorage
-  localStorage.setItem('scanData', JSON.stringify(data));
-  
-  // Update stats
-  stat.total++;
-  ok ? stat.valid++ : stat.invalid++;
-  
-  no++;
-  
-  renderTable();
-  updateStat();
-  
-  // Auto retry after 1.5 seconds
-  setTimeout(() => {
-    retry();
-  }, 1500);
-}
 
-// ===== RETRY =====
-function retry() {
-  current = null;
-  result.style.display = "none";
-  input.disabled = false;
-  input.value = "";
-  input.classList.remove("valid", "invalid", "locked");
-  scanStatus.style.background = 'rgba(0,0,0,0.8)';
-  
-  // Restart camera
-  startCamera();
-}
+  const avg=data.symbols.reduce((a,b)=>a+b.confidence,0)/(data.symbols.length||1);
+  if(avg<(SCAN_MODE==="FAST"?60:75)){scanning=false;return;}
 
-// ===== EDIT MANUAL =====
-function editManual() {
-  input.disabled = false;
-  input.focus();
-  input.select();
-}
+  const m=normalize(data.text).match(/[A-Z]\d{10}/);
+  if(m) scanBuffer[m[0]]=(scanBuffer[m[0]]||0)+1;
+  scanCount++;
 
-// ===== UPDATE STATS =====
-function updateStat() {
-  document.getElementById('total').textContent = stat.total;
-  document.getElementById('valid').textContent = stat.valid;
-  document.getElementById('invalid').textContent = stat.invalid;
-}
-
-// ===== RENDER TABLE (FIXED) =====
-function renderTable() {
-  const tbody = document.getElementById('tbody');
-  
-  if (data.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="4" style="text-align:center;color:#64748b;padding:20px">
-          Belum ada data scan
-        </td>
-      </tr>
-    `;
-    return;
+  const limit=SCAN_MODE==="FAST"?MAX_FAST:MAX_ACC;
+  if(scanCount>=limit){
+    const best=Object.entries(scanBuffer).sort((a,b)=>b[1]-a[1])[0];
+    if(best){
+      current=best[0];
+      document.getElementById("serial").value=current;
+      document.getElementById("result").style.display="block";
+      stopCamera(); clearInterval(interval);
+    }
+    scanBuffer={}; scanCount=0;
   }
-  
-  tbody.innerHTML = '';
-  
-  // Show last 50 records (newest first)
-  const recent = data.slice(-50).reverse();
-  
-  recent.forEach(item => {
-    const isValid = item.Status === 'VALID';
-    const row = tbody.insertRow();
-    row.style.background = isValid ? '#052e16' : '#450a0a';
-    
-    row.innerHTML = `
-      <td>${item.No}</td>
-      <td style="font-weight:700;letter-spacing:1px">${item.Serial}</td>
-      <td>${isValid ? '✅ VALID' : '❌ INVALID'}</td>
-      <td style="font-size:11px">${item.Waktu}</td>
-    `;
+  scanning=false;
+}
+
+// ================= SAVE =================
+function save(){
+  const v=document.getElementById("serial").value;
+  const ok=validSerial(v);
+  data.push({No:no++,Serial:v,Status:ok?"VALID":"INVALID",Waktu:new Date().toLocaleString("id-ID")});
+  localStorage.setItem("scanData",JSON.stringify(data));
+  stat.total++; ok?stat.valid++:stat.invalid++;
+  render(); retry();
+}
+function retry(){document.getElementById("result").style.display="none"; startCamera();}
+function edit(){document.getElementById("serial").disabled=false;}
+
+// ================= TABLE =================
+function render(){
+  document.getElementById("t").textContent=stat.total;
+  document.getElementById("v").textContent=stat.valid;
+  document.getElementById("i").textContent=stat.invalid;
+  const tb=document.getElementById("tbody");
+  tb.innerHTML="";
+  data.slice(-30).reverse().forEach(d=>{
+    tb.innerHTML+=`<tr><td>${d.No}</td><td>${d.Serial}</td><td>${d.Status}</td><td>${d.Waktu}</td></tr>`;
   });
 }
+render();
 
-// ===== DOWNLOAD EXCEL (SESUAI FORMAT YANG DIMINTA) =====
-function download() {
-  if (data.length === 0) {
-    alert('❌ Belum ada data untuk didownload!');
-    return;
-  }
-  
-  // Filter hanya VALID serials
-  const validSerials = data
-    .filter(d => d.Status === 'VALID')
-    .map(d => d.Serial);
-  
-  if (validSerials.length === 0) {
-    alert('⚠️ Tidak ada serial VALID untuk didownload!');
-    return;
-  }
-  
-  // Format seperti foto: semua serial dalam satu cell, dipisah koma
-  const serialGabung = validSerials.join(',');
-  
-  // Data bulan/tahun/lokasi (bisa disesuaikan)
-  const now = new Date();
-  const bulanNama = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", 
-                     "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-  const bulan = bulanNama[now.getMonth()];
-  const tahun = now.getFullYear();
-  const lokasi = "Bakauheni";
-  
-  // Buat worksheet sesuai format foto
-  const ws = XLSX.utils.aoa_to_sheet([
-    ["Rekapitulasi Arsip"],
-    [],
-    [`Bulan : ${bulan}`, `Tahun : ${tahun}`, lokasi],
-    [],
-    ["Keterangan", "Nomor Seri"],
-    ["KI-D2", serialGabung]
-  ]);
-  
-  // Merge cells untuk header
-  ws["!merges"] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } } // Merge "Rekapitulasi Arsip"
-  ];
-  
-  // Set column widths
-  ws["!cols"] = [
-    { wch: 20 },  // Column A
-    { wch: 150 }  // Column B (lebar untuk muat banyak serial)
-  ];
-  
-  // Style header (bold)
-  const headerCell = ws["A1"];
-  if (!headerCell.s) headerCell.s = {};
-  headerCell.s.font = { bold: true, sz: 14 };
-  
-  // Create workbook
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Rekapitulasi Arsip");
-  
-  // Download
-  const filename = `Rekapitulasi_Arsip_${tahun}_${bulan}.xlsx`;
-  XLSX.writeFile(wb, filename);
-  
-  alert(`✅ Excel berhasil didownload!\n\nTotal serial VALID: ${validSerials.length}`);
+// ================= EXCEL =================
+function download(){
+  const valid=data.filter(d=>d.Status==="VALID").map(d=>d.Serial).join(",");
+  const ws=XLSX.utils.aoa_to_sheet([["Rekapitulasi Arsip"],[],["Nomor Seri"],[valid]]);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Rekap");
+  XLSX.writeFile(wb,"Rekapitulasi_Arsip.xlsx");
 }
-
-// ===== CLEAR DATA (Optional - tambahan) =====
-function clearData() {
-  if (!confirm('⚠️ Hapus semua data? Tindakan ini tidak bisa dibatalkan!')) return;
-  
-  localStorage.removeItem('scanData');
-  data = [];
-  no = 1;
-  stat = { total: 0, valid: 0, invalid: 0 };
-  
-  renderTable();
-  updateStat();
-  
-  alert('✅ Data berhasil dihapus!');
-}
-
-// ===== PREVENT PAGE RELOAD ON ENTER =====
-input.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    save();
-  }
-});
-
 </script>
 
 </body>
