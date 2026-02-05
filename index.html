@@ -2,282 +2,82 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Serial Scanner PRO - Ultimate Edition</title>
+<title>Serial Scanner - Fast 9 Digit</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="AI-Powered Serial Number Scanner with Handwriting Recognition">
-
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
 
 <style>
-*{box-sizing:border-box}
+*{box-sizing:border-box;margin:0;padding:0}
 body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
-  background:#020617;
-  color:white;
-  padding:12px;
-  padding-bottom:100px;
-  overflow-x:hidden;
-}
-h2{margin:8px 0;font-size:24px}
-small{color:#94a3b8}
-
-/* Header dengan Settings */
-.header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:12px;
-}
-.settings-btn{
-  background:#1e293b;
-  border:2px solid #334155;
-  color:white;
-  padding:8px 16px;
-  border-radius:8px;
-  cursor:pointer;
-  font-weight:700;
-}
-
-/* Modal Settings */
-.modal{
-  display:none;
-  position:fixed;
-  top:0;left:0;right:0;bottom:0;
-  background:rgba(0,0,0,0.9);
-  z-index:1000;
-  padding:20px;
-  overflow-y:auto;
-}
-.modal.show{display:flex;align-items:center;justify-content:center}
-.modal-content{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   background:#0f172a;
-  border-radius:16px;
-  padding:20px;
-  max-width:500px;
-  width:100%;
-  border:2px solid #334155;
+  color:#fff;
+  padding:16px;
 }
-.modal-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+
+.header{
+  text-align:center;
   margin-bottom:16px;
 }
-.close-btn{
-  background:transparent;
-  border:none;
-  color:white;
-  font-size:28px;
-  cursor:pointer;
-  padding:0;
-  width:32px;
-  height:32px;
-}
-.setting-item{
-  background:#1e293b;
-  padding:12px;
-  border-radius:8px;
-  margin-bottom:10px;
-}
-.setting-item label{display:block;margin-bottom:6px;font-weight:600}
-.setting-item select,.setting-item input[type="number"]{
-  width:100%;
-  padding:8px;
-  background:#0f172a;
-  border:2px solid #334155;
-  border-radius:6px;
-  color:white;
-  font-size:14px;
-}
-
-/* Tabs */
-.tabs{
-  display:flex;
-  gap:8px;
-  margin:12px 0;
-}
-.tab{
-  flex:1;
-  padding:12px;
-  background:#1e293b;
-  border:2px solid #334155;
-  border-radius:10px;
-  cursor:pointer;
-  text-align:center;
-  font-weight:700;
-  transition:all 0.3s;
-}
-.tab.active{
+h1{font-size:24px;margin-bottom:4px}
+.badge{
   background:linear-gradient(135deg,#22c55e,#16a34a);
-  color:white;
-  border-color:#22c55e;
-  box-shadow:0 4px 12px rgba(34,197,94,0.3);
+  padding:4px 12px;
+  border-radius:12px;
+  font-size:11px;
+  display:inline-block;
+  margin-left:8px;
 }
 
-/* Camera Section */
-.camera{
+.camera-container{
   position:relative;
-  overflow:hidden;
   border-radius:16px;
+  overflow:hidden;
+  background:#000;
+  margin-bottom:16px;
 }
 video{
   width:100%;
-  height:55vh;
+  height:60vh;
   object-fit:cover;
-  border-radius:16px;
-  background:#000;
 }
-.scan-box{
+
+.scan-area{
   position:absolute;
-  top:40%;
+  top:35%;
   left:10%;
   width:80%;
-  height:15%;
-  border:3px dashed #22c55e;
+  height:20%;
+  border:3px solid #22c55e;
   border-radius:12px;
-  box-shadow:0 0 0 99999px rgba(0,0,0,0.55);
-  pointer-events:none;
-  animation:pulse-border 2s infinite;
+  box-shadow:0 0 0 9999px rgba(0,0,0,0.6);
+  animation:pulse 2s infinite;
 }
-@keyframes pulse-border{
-  0%,100%{border-color:#22c55e;opacity:1}
-  50%{border-color:#16a34a;opacity:0.7}
+@keyframes pulse{
+  0%,100%{border-color:#22c55e;transform:scale(1)}
+  50%{border-color:#16a34a;transform:scale(1.02)}
 }
-.scan-status{
+
+.status{
   position:absolute;
   bottom:20px;
   left:50%;
   transform:translateX(-50%);
   background:rgba(0,0,0,0.9);
-  padding:12px 20px;
+  padding:12px 24px;
   border-radius:24px;
-  font-size:14px;
   font-weight:700;
   border:2px solid #22c55e;
-  box-shadow:0 4px 12px rgba(0,0,0,0.5);
-}
-.scan-progress{
-  position:absolute;
-  top:10px;
-  right:10px;
-  background:rgba(0,0,0,0.9);
-  padding:8px 14px;
-  border-radius:12px;
-  font-size:12px;
-  border:2px solid #facc15;
-}
-
-/* Flashlight Button */
-.flashlight-btn{
-  position:absolute;
-  top:10px;
-  left:10px;
-  background:rgba(0,0,0,0.8);
-  border:2px solid #94a3b8;
-  color:white;
-  padding:10px;
-  border-radius:50%;
-  cursor:pointer;
-  width:48px;
-  height:48px;
-  font-size:20px;
-}
-.flashlight-btn.active{
-  background:#facc15;
-  border-color:#facc15;
-  color:#000;
-}
-
-/* Handwriting Section */
-.handwriting-area{
-  background:#0f172a;
-  border-radius:16px;
-  padding:16px;
-  margin-top:12px;
-  border:2px solid #334155;
-}
-.draw-canvas{
-  width:100%;
-  height:280px;
-  background:white;
-  border-radius:12px;
-  cursor:crosshair;
-  touch-action:none;
-  border:3px solid #22c55e;
-  box-shadow:0 4px 12px rgba(34,197,94,0.2);
-}
-.draw-tools{
-  display:flex;
-  gap:8px;
-  margin:12px 0;
-  align-items:center;
-}
-.tool-btn{
-  padding:8px 12px;
-  background:#1e293b;
-  border:2px solid #334155;
-  border-radius:8px;
-  color:white;
-  cursor:pointer;
   font-size:14px;
 }
-.tool-btn.active{background:#22c55e;color:black;border-color:#22c55e}
-.stroke-slider{
-  flex:1;
-  height:6px;
-  background:#334155;
-  border-radius:3px;
-  outline:none;
-}
 
-/* Character Preview */
-.char-boxes{
-  display:flex;
-  gap:4px;
-  margin-top:12px;
-  overflow-x:auto;
-  padding:8px;
-  background:#1e293b;
-  border-radius:10px;
-  border:2px solid #334155;
-}
-.char-box{
-  min-width:46px;
-  height:56px;
-  background:white;
-  border-radius:8px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  font-size:22px;
-  font-weight:bold;
-  color:black;
-  border:3px solid #22c55e;
-  position:relative;
-}
-.char-box.empty{
-  background:#334155;
-  border-color:#475569;
-  color:#94a3b8;
-}
-.char-confidence{
-  font-size:9px;
-  color:#666;
-  position:absolute;
-  bottom:2px;
-}
-
-/* Control Buttons */
-.hand-controls{
+.controls{
   display:flex;
   gap:8px;
-  margin-top:12px;
+  margin-bottom:16px;
 }
-.hand-controls button{
+button{
   flex:1;
   padding:14px;
   border:none;
@@ -287,1218 +87,526 @@ video{
   font-size:15px;
   transition:transform 0.2s;
 }
-.hand-controls button:active{transform:scale(0.95)}
-.clear-btn{background:#ef4444;color:white}
-.undo-btn{background:#f59e0b;color:white}
-.recognize-btn{background:linear-gradient(135deg,#22c55e,#16a34a);color:white}
-.recognize-btn:disabled{background:#4b5563;cursor:not-allowed}
+button:active{transform:scale(0.95)}
+.btn-start{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff}
+.btn-manual{background:#3b82f6;color:#fff}
 
-/* Result Card */
-.card{
-  background:#0f172a;
-  border-radius:14px;
+.result-card{
+  background:#1e293b;
+  border-radius:12px;
   padding:16px;
-  margin-top:12px;
   border:2px solid #22c55e;
-  box-shadow:0 4px 12px rgba(34,197,94,0.2);
+  display:none;
 }
-
-input{
+.result-card input{
   width:100%;
-  font-size:24px;
+  font-size:28px;
   padding:14px;
   border-radius:10px;
   border:2px solid #22c55e;
   text-align:center;
-  letter-spacing:4px;
-  text-transform:uppercase;
+  letter-spacing:6px;
   background:#0f172a;
-  color:white;
+  color:#fff;
   font-weight:700;
+  margin-bottom:12px;
 }
-
-button{
-  width:100%;
-  padding:14px;
-  margin-top:10px;
-  border:none;
-  border-radius:10px;
-  font-weight:700;
-  cursor:pointer;
-  font-size:15px;
-  transition:all 0.2s;
+.confidence{
+  text-align:center;
+  color:#94a3b8;
+  font-size:13px;
+  margin-bottom:12px;
+  padding:8px;
+  background:#0f172a;
+  border-radius:8px;
 }
-button:active{transform:scale(0.98)}
-.start,.save{background:linear-gradient(135deg,#22c55e,#16a34a);color:white}
-.retry{background:#facc15;color:#000}
-.manual{background:#38bdf8;color:#000}
-.download{background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;margin-top:14px}
-.mode{background:#1e293b;color:white}
-.export-all{background:linear-gradient(135deg,#ec4899,#d946ef);color:white}
-.clear-data{background:#ef4444;color:white}
+.btn-save{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;margin-bottom:8px}
+.btn-retry{background:#f59e0b;color:#000}
 
-/* Stats */
 .stats{
-  display:flex;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
   gap:8px;
-  margin-top:14px;
+  margin:16px 0;
 }
-.stats div{
-  flex:1;
-  background:linear-gradient(135deg,#1e293b,#0f172a);
-  border-radius:12px;
+.stat-box{
+  background:#1e293b;
   padding:12px;
+  border-radius:10px;
   text-align:center;
   border:2px solid #334155;
 }
-.stats b{
-  font-size:26px;
+.stat-box small{display:block;color:#94a3b8;font-size:12px}
+.stat-box b{
   display:block;
-  margin-top:6px;
-  background:linear-gradient(135deg,#22c55e,#16a34a);
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-  background-clip:text;
-}
-.stats .invalid-stat b{
-  background:linear-gradient(135deg,#ef4444,#dc2626);
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
+  font-size:24px;
+  margin-top:4px;
+  color:#22c55e;
 }
 
-/* Table */
-.table-container{
-  overflow-x:auto;
-  margin-top:14px;
-  background:#0f172a;
-  border-radius:12px;
-  border:2px solid #334155;
-}
 table{
   width:100%;
   border-collapse:collapse;
+  background:#1e293b;
+  border-radius:10px;
+  overflow:hidden;
   font-size:13px;
 }
 th,td{
-  border:1px solid #334155;
   padding:10px 8px;
+  border:1px solid #334155;
 }
 th{
-  background:#1e293b;
+  background:#0f172a;
   font-weight:700;
-  position:sticky;
-  top:0;
-  z-index:10;
 }
 .valid{background:#dcfce7;color:#14532d}
 .invalid{background:#fee2e2;color:#7f1d1d}
 
-/* Action buttons in table */
-.delete-btn{
-  background:#ef4444;
-  color:white;
-  border:none;
-  padding:4px 10px;
-  border-radius:6px;
-  cursor:pointer;
-  font-size:11px;
-}
-
-/* Filters */
-.filters{
-  display:flex;
-  gap:8px;
-  margin:12px 0;
-  flex-wrap:wrap;
-}
-.filter-btn{
-  padding:8px 16px;
-  background:#1e293b;
-  border:2px solid #334155;
-  border-radius:8px;
-  color:white;
-  cursor:pointer;
-  font-size:13px;
-  font-weight:600;
-}
-.filter-btn.active{background:#22c55e;color:black;border-color:#22c55e}
-
-/* Badges & Indicators */
-.confidence{
-  font-size:13px;
-  color:#94a3b8;
-  margin-top:8px;
-  text-align:center;
-  padding:6px;
-  background:#1e293b;
-  border-radius:6px;
-}
-.ai-badge{
-  display:inline-block;
+.btn-export{
   background:linear-gradient(135deg,#8b5cf6,#7c3aed);
-  color:white;
-  padding:4px 12px;
-  border-radius:12px;
-  font-size:11px;
-  margin-left:8px;
-  font-weight:700;
-  box-shadow:0 2px 8px rgba(139,92,246,0.3);
-}
-.model-status{
-  background:#1e293b;
-  padding:12px;
-  border-radius:10px;
-  margin-top:8px;
-  font-size:13px;
-  text-align:center;
-  border:2px solid #334155;
-}
-.model-status.loading{color:#facc15;border-color:#facc15}
-.model-status.ready{color:#22c55e;border-color:#22c55e}
-.model-status.error{color:#ef4444;border-color:#ef4444}
-
-/* Animations */
-@keyframes scan{0%,100%{opacity:1}50%{opacity:0.4}}
-.scanning{animation:scan 1.2s ease-in-out infinite}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-.processing{animation:pulse 0.6s ease-in-out infinite}
-@keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
-.loading-shimmer{
-  background:linear-gradient(90deg,#1e293b 25%,#334155 50%,#1e293b 75%);
-  background-size:200% 100%;
-  animation:shimmer 2s infinite;
+  color:#fff;
+  width:100%;
+  margin-top:12px;
 }
 
-/* Toast Notifications */
 .toast{
   position:fixed;
   top:20px;
   right:20px;
   background:#22c55e;
-  color:white;
-  padding:14px 20px;
+  color:#fff;
+  padding:12px 20px;
   border-radius:10px;
   font-weight:700;
-  z-index:2000;
   display:none;
-  box-shadow:0 4px 16px rgba(0,0,0,0.3);
-  animation:slideIn 0.3s;
+  z-index:9999;
+  box-shadow:0 4px 12px rgba(0,0,0,0.3);
 }
 .toast.error{background:#ef4444}
-.toast.warning{background:#f59e0b}
-@keyframes slideIn{from{transform:translateX(400px);opacity:0}to{transform:translateX(0);opacity:1}}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  <div>
-    <h2>🤖 Serial Scanner PRO <span class="ai-badge">AI ULTIMATE</span></h2>
-    <small>King Nando gacor juga king</small>
-  </div>
-  <button class="settings-btn" onclick="openSettings()">⚙️</button>
+  <h1>🎯 Serial Scanner<span class="badge">FAST 9 DIGIT</span></h1>
+  <small>Optimized for Patterned Certificate Paper</small>
 </div>
 
-<!-- Settings Modal -->
-<div class="modal" id="settingsModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>⚙️ Pengaturan</h3>
-      <button class="close-btn" onclick="closeSettings()">&times;</button>
-    </div>
-    
-    <div class="setting-item">
-      <label>🎯 Akurasi OCR Minimum</label>
-      <select id="ocrThreshold" onchange="saveSettings()">
-        <option value="60">60% - Fast (Cepat)</option>
-        <option value="70">70% - Balanced</option>
-        <option value="75" selected>75% - Accurate (Default)</option>
-        <option value="85">85% - High Precision</option>
-      </select>
-    </div>
-    
-    <div class="setting-item">
-      <label>🔄 Jumlah Scan untuk Validasi</label>
-      <select id="scanCount" onchange="saveSettings()">
-        <option value="2">2x - Fast Mode</option>
-        <option value="4" selected>4x - Accurate Mode</option>
-        <option value="6">6x - Ultra Precision</option>
-      </select>
-    </div>
-    
-    <div class="setting-item">
-      <label>✍️ Ketebalan Garis Tulisan</label>
-      <input type="number" id="strokeWidth" value="4" min="2" max="8" onchange="saveSettings()">
-    </div>
-    
-    <div class="setting-item">
-      <label>🔊 Suara Notifikasi</label>
-      <select id="soundEnabled" onchange="saveSettings()">
-        <option value="true" selected>Aktif</option>
-        <option value="false">Nonaktif</option>
-      </select>
-    </div>
-    
-    <div class="setting-item">
-      <label>📊 Auto-save ke LocalStorage</label>
-      <select id="autoSave" onchange="saveSettings()">
-        <option value="true" selected>Aktif</option>
-        <option value="false">Nonaktif</option>
-      </select>
-    </div>
-    
-    <button class="clear-data" onclick="confirmClearData()">🗑️ Hapus Semua Data</button>
-  </div>
+<div class="controls">
+  <button class="btn-start" onclick="startScan()">📸 Start Camera</button>
+  <button class="btn-manual" onclick="manualEntry()">✍️ Manual Input</button>
 </div>
 
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('camera')">📸 Kamera OCR</div>
-  <div class="tab" onclick="switchTab('handwriting')">✍️ AI Handwriting</div>
-</div>
-
-<!-- TAB KAMERA OCR -->
-<div id="tab-camera">
-  <button class="start" onclick="startCamera()">▶ Aktifkan Kamera</button>
-  <button class="mode" onclick="toggleMode()">⚙ Mode: <span id="modeText">ACCURATE</span></button>
-
-  <div class="camera" id="camera" style="display:none">
-    <video id="video" playsinline muted></video>
-    <button class="flashlight-btn" id="flashBtn" onclick="toggleFlash()" style="display:none">💡</button>
-    <div class="scan-box"></div>
-    <div class="scan-progress" id="scanProgress" style="display:none">0/4</div>
-    <div class="scan-status scanning" id="status">🔍 Scanning...</div>
-  </div>
-</div>
-
-<!-- TAB HANDWRITING -->
-<div id="tab-handwriting" style="display:none">
-  <div class="model-status loading" id="modelStatus">⏳ Loading AI model...</div>
-  
-  <div class="handwriting-area">
-    <p style="margin:0 0 8px 0;font-size:14px;font-weight:600">
-      ✍️ Tulis nomor seri dengan jelas (1 huruf + 10 angka)
-    </p>
-    
-    <div class="draw-tools">
-      <button class="tool-btn active" onclick="setTool('pen')">✏️</button>
-      <button class="tool-btn" onclick="setTool('eraser')">🧹</button>
-      <input type="range" class="stroke-slider" id="strokeSlider" min="2" max="10" value="4" 
-             oninput="updateStrokeWidth(this.value)">
-      <span id="strokeDisplay" style="font-size:12px">4px</span>
-    </div>
-    
-    <canvas id="drawCanvas" class="draw-canvas"></canvas>
-    
-    <div class="char-boxes" id="charPreview">
-      <div class="char-box empty">?</div>
-      <div class="char-box empty">?</div>
-      <div class="char-box empty">?</div>
-      <div class="char-box empty">?</div>
-      <div class="char-box empty">?</div>
-      <div class="char-box empty">?</div>
-      <div class="char-box empty">?</div>
-      <div class="char-box empty">?</div>
-      <div class="char-box empty">?</div>
-      <div class="char-box empty">?</div>
-      <div class="char-box empty">?</div>
-    </div>
-    
-    <div class="hand-controls">
-      <button class="undo-btn" onclick="undoStroke()">↩️ Undo</button>
-      <button class="clear-btn" onclick="clearCanvas()">🗑 Hapus</button>
-      <button class="recognize-btn" id="recognizeBtn" onclick="recognizeHandwritingAI()" disabled>
-        🤖 Kenali AI
-      </button>
-    </div>
-    <div class="confidence" id="handwritingResult"></div>
-  </div>
+<div class="camera-container" id="cameraBox" style="display:none">
+  <video id="video" playsinline autoplay muted></video>
+  <div class="scan-area"></div>
+  <div class="status" id="status">🔍 Scanning...</div>
 </div>
 
 <canvas id="canvas" hidden></canvas>
 
-<div class="card" id="result" style="display:none">
-  <input id="serial" maxlength="11">
+<div class="result-card" id="resultCard">
+  <input id="serialInput" maxlength="9" placeholder="000000000">
   <div class="confidence" id="confidenceText"></div>
-  <button class="save" onclick="save()">✔ Simpan</button>
-  <button class="retry" onclick="retry()">🔄 Scan Ulang</button>
-  <button class="manual" onclick="edit()">✍ Edit Manual</button>
+  <button class="btn-save" onclick="saveSerial()">✔️ Save</button>
+  <button class="btn-retry" onclick="retryScan()">🔄 Retry</button>
 </div>
 
 <div class="stats">
-  <div><small>Total</small><b id="t">0</b></div>
-  <div><small>Valid</small><b id="v">0</b></div>
-  <div class="invalid-stat"><small>Invalid</small><b id="i">0</b></div>
+  <div class="stat-box">
+    <small>Total</small>
+    <b id="totalCount">0</b>
+  </div>
+  <div class="stat-box">
+    <small>Valid</small>
+    <b id="validCount">0</b>
+  </div>
+  <div class="stat-box">
+    <small>Invalid</small>
+    <b id="invalidCount" style="color:#ef4444">0</b>
+  </div>
 </div>
 
-<!-- Filters -->
-<div class="filters">
-  <button class="filter-btn active" onclick="filterData('all')">Semua</button>
-  <button class="filter-btn" onclick="filterData('valid')">✅ Valid Saja</button>
-  <button class="filter-btn" onclick="filterData('invalid')">❌ Invalid Saja</button>
-  <button class="filter-btn" onclick="filterData('today')">📅 Hari Ini</button>
+<div style="overflow-x:auto">
+  <table>
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Serial (9 Digit)</th>
+        <th>Status</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <tr><td colspan="4" style="text-align:center;color:#94a3b8">No data yet</td></tr>
+    </tbody>
+  </table>
 </div>
 
-<div class="table-container">
-<table>
-<thead><tr><th>No</th><th>Serial</th><th>Status</th><th>Waktu</th><th>Aksi</th></tr></thead>
-<tbody id="tbody"><tr><td colspan="5" align="center">Belum ada data</td></tr></tbody>
-</table>
-</div>
+<button class="btn-export" onclick="exportExcel()">⬇️ Download Excel</button>
 
-<button class="download" onclick="downloadExcel()">⬇ Download Excel</button>
-<button class="export-all" onclick="exportJSON()">📦 Export JSON</button>
-
-<!-- Toast Notification -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ================= GLOBAL CONFIG =================
-let CONFIG = {
-  ocrThreshold: 75,
-  scanCount: 4,
-  strokeWidth: 4,
-  soundEnabled: true,
-  autoSave: true
-};
+let data = JSON.parse(localStorage.getItem('serialData')) || [];
+let scanning = false;
+let stream = null;
+let worker = null;
+let scanAttempts = 0;
+const MAX_ATTEMPTS = 3;
 
-let currentTab = 'camera';
-let currentFilter = 'all';
-let SCAN_MODE = "ACCURATE";
-let scanBuffer = {}, scanCount = 0;
+// Initialize Tesseract worker with optimized config
+async function initWorker() {
+  worker = await Tesseract.createWorker('eng', 1, {
+    logger: () => {},
+    errorHandler: e => console.error(e)
+  });
+  
+  await worker.setParameters({
+    tessedit_char_whitelist: '0123456789',
+    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE,
+    tessedit_ocr_engine_mode: Tesseract.OEM.LSTM_ONLY,
+    preserve_interword_spaces: '0'
+  });
+}
 
-let data = JSON.parse(localStorage.getItem("scanData")) || [];
-let no = data.length + 1;
-let stat = {
-  total: data.length,
-  valid: data.filter(d => d.Status === "VALID").length,
-  invalid: data.filter(d => d.Status === "INVALID").length
-};
+// Advanced preprocessing for patterned paper
+function preprocessImage(ctx, w, h) {
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const d = imgData.data;
+  
+  // 1. Convert to grayscale with contrast enhancement
+  for (let i = 0; i < d.length; i += 4) {
+    let gray = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+    d[i] = d[i+1] = d[i+2] = gray;
+  }
+  
+  // 2. Apply adaptive thresholding to remove pattern
+  const blockSize = 15;
+  const C = 10;
+  
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      
+      // Calculate local mean
+      let sum = 0, count = 0;
+      for (let by = Math.max(0, y - blockSize); by < Math.min(h, y + blockSize); by++) {
+        for (let bx = Math.max(0, x - blockSize); bx < Math.min(w, x + blockSize); bx++) {
+          const bidx = (by * w + bx) * 4;
+          sum += d[bidx];
+          count++;
+        }
+      }
+      const mean = sum / count;
+      
+      // Apply threshold
+      const val = d[idx] > (mean - C) ? 255 : 0;
+      d[idx] = d[idx+1] = d[idx+2] = val;
+    }
+  }
+  
+  // 3. Morphological opening (remove small dots)
+  const kernel = 2;
+  const temp = new Uint8ClampedArray(d);
+  
+  // Erosion
+  for (let y = kernel; y < h - kernel; y++) {
+    for (let x = kernel; x < w - kernel; x++) {
+      let min = 255;
+      for (let ky = -kernel; ky <= kernel; ky++) {
+        for (let kx = -kernel; kx <= kernel; kx++) {
+          const idx = ((y + ky) * w + (x + kx)) * 4;
+          min = Math.min(min, temp[idx]);
+        }
+      }
+      const idx = (y * w + x) * 4;
+      d[idx] = d[idx+1] = d[idx+2] = min;
+    }
+  }
+  
+  // Dilation
+  for (let y = kernel; y < h - kernel; y++) {
+    for (let x = kernel; x < w - kernel; x++) {
+      let max = 0;
+      for (let ky = -kernel; ky <= kernel; ky++) {
+        for (let kx = -kernel; kx <= kernel; kx++) {
+          const idx = ((y + ky) * w + (x + kx)) * 4;
+          max = Math.max(max, d[idx]);
+        }
+      }
+      const idx = (y * w + x) * 4;
+      d[idx] = d[idx+1] = d[idx+2] = max;
+    }
+  }
+  
+  // 4. Increase contrast
+  let min = 255, max = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    min = Math.min(min, d[i]);
+    max = Math.max(max, d[i]);
+  }
+  
+  const scale = 255 / (max - min || 1);
+  for (let i = 0; i < d.length; i += 4) {
+    const val = ((d[i] - min) * scale);
+    d[i] = d[i+1] = d[i+2] = val > 127 ? 255 : 0;
+  }
+  
+  ctx.putImageData(imgData, 0, 0);
+}
 
-let stream, scanning = false, current = null, track = null;
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-const status = document.getElementById("status");
+// Normalize and clean OCR result
+function cleanSerial(text) {
+  // Remove all non-digits
+  let clean = text.replace(/[^0-9]/g, '');
+  
+  // Common OCR mistakes
+  clean = clean.replace(/O/g, '0')
+               .replace(/I/g, '1')
+               .replace(/l/g, '1')
+               .replace(/Z/g, '2')
+               .replace(/S/g, '5')
+               .replace(/B/g, '8');
+  
+  return clean;
+}
 
-// Handwriting
-let drawCanvas, drawCtx;
-let isDrawing = false;
-let lastX = 0, lastY = 0;
-let letterModel = null, digitModel = null;
-let modelReady = false;
-let strokes = [];
-let currentTool = 'pen';
-let strokeHistory = [];
+// Validate 9-digit serial
+function isValid(serial) {
+  return /^\d{9}$/.test(serial);
+}
 
-// ================= SETTINGS =================
-function loadSettings() {
-  const saved = localStorage.getItem('scannerConfig');
-  if (saved) {
-    CONFIG = JSON.parse(saved);
-    document.getElementById('ocrThreshold').value = CONFIG.ocrThreshold;
-    document.getElementById('scanCount').value = CONFIG.scanCount;
-    document.getElementById('strokeWidth').value = CONFIG.strokeWidth;
-    document.getElementById('soundEnabled').value = CONFIG.soundEnabled;
-    document.getElementById('autoSave').value = CONFIG.autoSave;
+// Start camera and scanning
+async function startScan() {
+  try {
+    if (!worker) await initWorker();
+    
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment',
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      }
+    });
+    
+    const video = document.getElementById('video');
+    video.srcObject = stream;
+    await video.play();
+    
+    document.getElementById('cameraBox').style.display = 'block';
+    document.getElementById('resultCard').style.display = 'none';
+    
+    // Start continuous scanning
+    scanAttempts = 0;
+    scanLoop();
+    
+  } catch (e) {
+    showToast('Camera error: ' + e.message, 'error');
   }
 }
 
-function saveSettings() {
-  CONFIG.ocrThreshold = parseInt(document.getElementById('ocrThreshold').value);
-  CONFIG.scanCount = parseInt(document.getElementById('scanCount').value);
-  CONFIG.strokeWidth = parseInt(document.getElementById('strokeWidth').value);
-  CONFIG.soundEnabled = document.getElementById('soundEnabled').value === 'true';
-  CONFIG.autoSave = document.getElementById('autoSave').value === 'true';
-  
-  localStorage.setItem('scannerConfig', JSON.stringify(CONFIG));
-  showToast('✅ Pengaturan disimpan', 'success');
-  
-  if (drawCtx) {
-    drawCtx.lineWidth = CONFIG.strokeWidth;
+// Continuous scan loop
+async function scanLoop() {
+  if (!stream || scanAttempts >= MAX_ATTEMPTS) {
+    if (scanAttempts >= MAX_ATTEMPTS) {
+      showToast('Max attempts reached. Please try again.', 'error');
+      stopCamera();
+    }
+    return;
   }
-}
-
-function openSettings() {
-  document.getElementById('settingsModal').classList.add('show');
-}
-
-function closeSettings() {
-  document.getElementById('settingsModal').classList.remove('show');
-}
-
-function confirmClearData() {
-  if (confirm('⚠️ Yakin ingin menghapus SEMUA data? Tindakan ini tidak dapat dibatalkan!')) {
-    if (confirm('⚠️ Konfirmasi sekali lagi - HAPUS SEMUA DATA?')) {
-      data = [];
-      no = 1;
-      stat = {total: 0, valid: 0, invalid: 0};
-      localStorage.removeItem('scanData');
-      render();
-      showToast('🗑️ Semua data berhasil dihapus', 'success');
-      closeSettings();
+  
+  if (!scanning) {
+    scanning = true;
+    scanAttempts++;
+    
+    const result = await performScan();
+    
+    if (result) {
+      stopCamera();
+      showResult(result);
+    } else {
+      scanning = false;
+      setTimeout(scanLoop, 800); // Scan every 0.8s
     }
   }
 }
 
-// ================= TOAST NOTIFICATION =================
+// Perform single scan
+async function performScan() {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  // Capture from scan area
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  const sx = vw * 0.1;
+  const sy = vh * 0.35;
+  const sw = vw * 0.8;
+  const sh = vh * 0.2;
+  
+  canvas.width = sw;
+  canvas.height = sh;
+  
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+  
+  // Apply advanced preprocessing
+  preprocessImage(ctx, sw, sh);
+  
+  // OCR with Tesseract
+  try {
+    const { data: { text, confidence } } = await worker.recognize(canvas);
+    
+    const cleaned = cleanSerial(text);
+    
+    // Extract first 9 consecutive digits
+    const match = cleaned.match(/\d{9}/);
+    
+    if (match && confidence > 60) {
+      return {
+        serial: match[0],
+        confidence: Math.round(confidence)
+      };
+    }
+  } catch (e) {
+    console.error('OCR error:', e);
+  }
+  
+  return null;
+}
+
+// Show result
+function showResult(result) {
+  document.getElementById('serialInput').value = result.serial;
+  document.getElementById('confidenceText').textContent = 
+    `✅ Confidence: ${result.confidence}% | Attempts: ${scanAttempts}/${MAX_ATTEMPTS}`;
+  document.getElementById('resultCard').style.display = 'block';
+  showToast('✅ Serial detected!', 'success');
+}
+
+// Stop camera
+function stopCamera() {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
+  scanning = false;
+  scanAttempts = 0;
+  document.getElementById('cameraBox').style.display = 'none';
+}
+
+// Retry scan
+function retryScan() {
+  document.getElementById('resultCard').style.display = 'none';
+  startScan();
+}
+
+// Manual entry
+function manualEntry() {
+  stopCamera();
+  document.getElementById('serialInput').value = '';
+  document.getElementById('confidenceText').textContent = '✍️ Manual Entry';
+  document.getElementById('resultCard').style.display = 'block';
+  document.getElementById('serialInput').focus();
+}
+
+// Save serial
+function saveSerial() {
+  const serial = document.getElementById('serialInput').value.trim();
+  
+  if (!serial) {
+    showToast('❌ Please enter a serial number', 'error');
+    return;
+  }
+  
+  const valid = isValid(serial);
+  
+  data.push({
+    no: data.length + 1,
+    serial: serial,
+    status: valid ? 'VALID' : 'INVALID',
+    time: new Date().toLocaleString('id-ID')
+  });
+  
+  localStorage.setItem('serialData', JSON.stringify(data));
+  
+  updateStats();
+  renderTable();
+  
+  showToast(valid ? '✅ Valid serial saved!' : '⚠️ Invalid serial saved!', valid ? 'success' : 'error');
+  
+  document.getElementById('resultCard').style.display = 'none';
+}
+
+// Update statistics
+function updateStats() {
+  const valid = data.filter(d => d.status === 'VALID').length;
+  const invalid = data.filter(d => d.status === 'INVALID').length;
+  
+  document.getElementById('totalCount').textContent = data.length;
+  document.getElementById('validCount').textContent = valid;
+  document.getElementById('invalidCount').textContent = invalid;
+}
+
+// Render table
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8">No data yet</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = data.slice(-20).reverse().map(d => `
+    <tr class="${d.status === 'VALID' ? 'valid' : 'invalid'}">
+      <td>${d.no}</td>
+      <td><b>${d.serial}</b></td>
+      <td>${d.status}</td>
+      <td style="font-size:11px">${d.time}</td>
+    </tr>
+  `).join('');
+}
+
+// Export to Excel
+function exportExcel() {
+  if (data.length === 0) {
+    showToast('❌ No data to export', 'error');
+    return;
+  }
+  
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Serial Scanner Report - 9 Digit'],
+    [`Generated: ${new Date().toLocaleString('id-ID')}`],
+    [],
+    ['No', 'Serial', 'Status', 'Time'],
+    ...data.map(d => [d.no, d.serial, d.status, d.time])
+  ]);
+  
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Data');
+  XLSX.writeFile(wb, `serials_${new Date().toISOString().split('T')[0]}.xlsx`);
+  
+  showToast('📥 Excel downloaded!', 'success');
+}
+
+// Show toast notification
 function showToast(message, type = 'success') {
   const toast = document.getElementById('toast');
   toast.textContent = message;
-  toast.className = 'toast ' + type;
+  toast.className = 'toast' + (type === 'error' ? ' error' : '');
   toast.style.display = 'block';
-  
-  if (CONFIG.soundEnabled) {
-    playSound(type);
-  }
   
   setTimeout(() => {
     toast.style.display = 'none';
   }, 3000);
 }
 
-function playSound(type) {
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  const oscillator = audioContext.createOscillator();
-  const gainNode = audioContext.createGain();
-  
-  oscillator.connect(gainNode);
-  gainNode.connect(audioContext.destination);
-  
-  oscillator.frequency.value = type === 'success' ? 800 : type === 'error' ? 400 : 600;
-  oscillator.type = 'sine';
-  
-  gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-  
-  oscillator.start(audioContext.currentTime);
-  oscillator.stop(audioContext.currentTime + 0.1);
-}
-
-// ================= AI MODEL =================
-async function loadAIModels() {
-  const modelStatus = document.getElementById('modelStatus');
-  const recognizeBtn = document.getElementById('recognizeBtn');
-  
-  try {
-    modelStatus.textContent = '⏳ Loading AI models...';
-    modelStatus.className = 'model-status loading';
-    
-    letterModel = createLetterModel();
-    digitModel = createDigitModel();
-    
-    await tf.nextFrame();
-    
-    modelReady = true;
-    modelStatus.textContent = '✅ AI Model Ready - Akurasi 85-92%';
-    modelStatus.className = 'model-status ready';
-    recognizeBtn.disabled = false;
-    
-  } catch(e) {
-    modelStatus.textContent = '⚠️ Fallback ke Tesseract OCR';
-    modelStatus.className = 'model-status error';
-    recognizeBtn.disabled = false;
-    console.error(e);
-  }
-}
-
-function createLetterModel() {
-  return tf.sequential({
-    layers: [
-      tf.layers.conv2d({inputShape: [28, 28, 1], filters: 32, kernelSize: 3, activation: 'relu'}),
-      tf.layers.maxPooling2d({poolSize: 2}),
-      tf.layers.conv2d({filters: 64, kernelSize: 3, activation: 'relu'}),
-      tf.layers.maxPooling2d({poolSize: 2}),
-      tf.layers.flatten(),
-      tf.layers.dense({units: 128, activation: 'relu'}),
-      tf.layers.dropout({rate: 0.5}),
-      tf.layers.dense({units: 26, activation: 'softmax'})
-    ]
-  });
-}
-
-function createDigitModel() {
-  return tf.sequential({
-    layers: [
-      tf.layers.conv2d({inputShape: [28, 28, 1], filters: 32, kernelSize: 3, activation: 'relu'}),
-      tf.layers.maxPooling2d({poolSize: 2}),
-      tf.layers.conv2d({filters: 64, kernelSize: 3, activation: 'relu'}),
-      tf.layers.maxPooling2d({poolSize: 2}),
-      tf.layers.flatten(),
-      tf.layers.dense({units: 128, activation: 'relu'}),
-      tf.layers.dropout({rate: 0.5}),
-      tf.layers.dense({units: 10, activation: 'softmax'})
-    ]
-  });
-}
-
-// ================= TAB SWITCHING =================
-function switchTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
-  
-  if (tab === 'camera') {
-    document.getElementById('tab-camera').style.display = 'block';
-    document.getElementById('tab-handwriting').style.display = 'none';
-    stopCamera();
-  } else {
-    document.getElementById('tab-camera').style.display = 'none';
-    document.getElementById('tab-handwriting').style.display = 'block';
-    stopCamera();
-    initHandwriting();
-    if (!modelReady) loadAIModels();
-  }
-}
-
-// ================= UTIL =================
-function normalize(t) {
-  return t.toUpperCase()
-     .replace(/[OQD]/gi, "0")
-    .replace(/[IL]/gi, "1")
-    .replace(/S/gi, "5")
-    .replace(/B/gi, "8")
-    .replace(/[^0-9]/g, "");
-}
-
-function validSerial(s) {
-  return /^\d{9}$/.test(s);
-}
-
-// ================= MODE =================
-function toggleMode() {
-  SCAN_MODE = SCAN_MODE === "FAST" ? "ACCURATE" : "FAST";
-  document.getElementById("modeText").textContent = SCAN_MODE;
-}
-
-// ================= FLASHLIGHT =================
-async function toggleFlash() {
-  if (!track) return;
-  
-  try {
-    const capabilities = track.getCapabilities();
-    if (capabilities.torch) {
-      const currentSettings = track.getSettings();
-      await track.applyConstraints({
-        advanced: [{torch: !currentSettings.torch}]
-      });
-      document.getElementById('flashBtn').classList.toggle('active');
-    }
-  } catch(e) {
-    showToast('❌ Flashlight tidak didukung', 'error');
-  }
-}
-
-// ================= CAMERA =================
-async function startCamera() {
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "environment",
-        width: {ideal: 1920},
-        height: {ideal: 1080}
-      }
-    });
-    
-    video.srcObject = stream;
-    await video.play();
-    
-    track = stream.getVideoTracks()[0];
-    const capabilities = track.getCapabilities();
-    
-    if (capabilities.torch) {
-      document.getElementById('flashBtn').style.display = 'block';
-    }
-    
-    document.getElementById("camera").style.display = "block";
-    document.getElementById("scanProgress").style.display = "block";
-    autoScan();
-    
-  } catch(e) {
-    showToast("❌ Kamera tidak dapat diakses: " + e.message, 'error');
-  }
-}
-
-function stopCamera() {
-  if (stream) {
-    stream.getTracks().forEach(t => t.stop());
-    stream = null;
-    track = null;
-  }
-  if (interval) clearInterval(interval);
-  document.getElementById("camera").style.display = "none";
-  document.getElementById("flashBtn").style.display = "none";
-  document.getElementById("scanProgress").style.display = "none";
-}
-
-// ================= PREPROCESS =================
-function preprocess(ctx, w, h) {
-  const img = ctx.getImageData(0, 0, w, h);
-  const d = img.data;
-  let min = 255, max = 0;
-  
-  for (let i = 0; i < d.length; i += 4) {
-    let g = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
-    d[i] = d[i + 1] = d[i + 2] = g;
-    min = Math.min(min, g);
-    max = Math.max(max, g);
-  }
-  
-  let s = 255 / (max - min || 1);
-  for (let i = 0; i < d.length; i += 4) {
-    let v = (d[i] - min) * s;
-    d[i] = d[i + 1] = d[i + 2] = v > 140 ? 255 : 0;
-  }
-  
-  ctx.putImageData(img, 0, 0);
-}
-
-function isBlurry(ctx, w, h) {
-  const d = ctx.getImageData(0, 0, w, h).data;
-  let m = 0, c = 0;
-  for (let i = 0; i < d.length; i += 4) {
-    m += d[i];
-    c++;
-  }
-  m /= c;
-  
-  let v = 0;
-  for (let i = 0; i < d.length; i += 4) v += (d[i] - m) ** 2;
-  return v / c < 120;
-}
-
-// ================= OCR =================
-let interval;
-function autoScan() {
-  interval = setInterval(() => !scanning && scan(), 1500);
-}
-
-async function scan() {
-  scanning = true;
-  const vw = video.videoWidth, vh = video.videoHeight;
-  const sx = vw * 0.1, sy = vh * 0.4, sw = vw * 0.8, sh = vh * 0.15;
-  canvas.width = sw;
-  canvas.height = sh;
-  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
-
-  if (isBlurry(ctx, sw, sh)) {
-    scanning = false;
-    return;
-  }
-  
-  preprocess(ctx, sw, sh);
-
-  const {data} = await Tesseract.recognize(canvas, "eng", {
-    tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE,
-    logger: () => {}
-  });
-
-  const avg = data.symbols.reduce((a, b) => a + b.confidence, 0) / (data.symbols.length || 1);
-  
-  if (avg < CONFIG.ocrThreshold) {
-    scanning = false;
-    return;
-  }
-
-  const m = normalize(data.text).match(/\d{9}/);
-  if (m) scanBuffer[m[0]] = (scanBuffer[m[0]] || 0) + 1;
-  scanCount++;
-  
-  document.getElementById('scanProgress').textContent = `${scanCount}/${CONFIG.scanCount}`;
-
-  if (scanCount >= CONFIG.scanCount) {
-    const best = Object.entries(scanBuffer).sort((a, b) => b[1] - a[1])[0];
-    if (best) {
-      current = best[0];
-      document.getElementById("serial").value = current;
-      document.getElementById("confidenceText").textContent = 
-        `✅ OCR Confidence: ${Math.round(avg)}% | Deteksi: ${best[1]}/${CONFIG.scanCount}`;
-      document.getElementById("result").style.display = "block";
-      stopCamera();
-      showToast('✅ Nomor seri terdeteksi!', 'success');
-    }
-    scanBuffer = {};
-    scanCount = 0;
-  }
-  scanning = false;
-}
-
-// ================= HANDWRITING =================
-function initHandwriting() {
-  if (!drawCanvas) {
-    drawCanvas = document.getElementById('drawCanvas');
-    drawCtx = drawCanvas.getContext('2d');
-    
-    const rect = drawCanvas.getBoundingClientRect();
-    drawCanvas.width = rect.width * 2;
-    drawCanvas.height = rect.height * 2;
-    drawCanvas.style.width = rect.width + 'px';
-    drawCanvas.style.height = rect.height + 'px';
-    drawCtx.scale(2, 2);
-    
-    drawCtx.strokeStyle = '#000';
-    drawCtx.lineWidth = CONFIG.strokeWidth;
-    drawCtx.lineCap = 'round';
-    drawCtx.lineJoin = 'round';
-    
-    drawCanvas.addEventListener('mousedown', startDrawing);
-    drawCanvas.addEventListener('mousemove', draw);
-    drawCanvas.addEventListener('mouseup', stopDrawing);
-    drawCanvas.addEventListener('mouseout', stopDrawing);
-    
-    drawCanvas.addEventListener('touchstart', handleTouch);
-    drawCanvas.addEventListener('touchmove', handleTouch);
-    drawCanvas.addEventListener('touchend', stopDrawing);
-    
-    document.getElementById('strokeSlider').value = CONFIG.strokeWidth;
-    document.getElementById('strokeDisplay').textContent = CONFIG.strokeWidth + 'px';
-  }
-  clearCanvas();
-}
-
-function setTool(tool) {
-  currentTool = tool;
-  document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-  event.target.classList.add('active');
-  
-  if (tool === 'eraser') {
-    drawCtx.strokeStyle = '#fff';
-    drawCtx.lineWidth = 20;
-  } else {
-    drawCtx.strokeStyle = '#000';
-    drawCtx.lineWidth = CONFIG.strokeWidth;
-  }
-}
-
-function updateStrokeWidth(value) {
-  CONFIG.strokeWidth = parseInt(value);
-  document.getElementById('strokeDisplay').textContent = value + 'px';
-  if (currentTool === 'pen') {
-    drawCtx.lineWidth = CONFIG.strokeWidth;
-  }
-}
-
-function startDrawing(e) {
-  isDrawing = true;
-  const rect = drawCanvas.getBoundingClientRect();
-  lastX = e.clientX - rect.left;
-  lastY = e.clientY - rect.top;
-  
-  const newStroke = {
-    points: [{x: lastX, y: lastY}],
-    style: drawCtx.strokeStyle,
-    width: drawCtx.lineWidth
-  };
-  strokes.push(newStroke);
-  strokeHistory.push([...strokes]);
-}
-
-function draw(e) {
-  if (!isDrawing) return;
-  e.preventDefault();
-  
-  const rect = drawCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  
-  drawCtx.beginPath();
-  drawCtx.moveTo(lastX, lastY);
-  drawCtx.lineTo(x, y);
-  drawCtx.stroke();
-  
-  if (strokes.length > 0) {
-    strokes[strokes.length - 1].points.push({x, y});
-  }
-  
-  lastX = x;
-  lastY = y;
-}
-
-function handleTouch(e) {
-  e.preventDefault();
-  const touch = e.touches[0];
-  const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 'mousemove', {
-    clientX: touch.clientX,
-    clientY: touch.clientY
-  });
-  drawCanvas.dispatchEvent(mouseEvent);
-}
-
-function stopDrawing() {
-  isDrawing = false;
-}
-
-function undoStroke() {
-  if (strokeHistory.length > 1) {
-    strokeHistory.pop();
-    strokes = [...strokeHistory[strokeHistory.length - 1]];
-    redrawCanvas();
-    showToast('↩️ Stroke dibatalkan', 'warning');
-  }
-}
-
-function redrawCanvas() {
-  drawCtx.fillStyle = 'white';
-  drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-  
-  strokes.forEach(stroke => {
-    drawCtx.strokeStyle = stroke.style;
-    drawCtx.lineWidth = stroke.width;
-    drawCtx.beginPath();
-    stroke.points.forEach((point, i) => {
-      if (i === 0) drawCtx.moveTo(point.x, point.y);
-      else drawCtx.lineTo(point.x, point.y);
-    });
-    drawCtx.stroke();
-  });
-}
-
-function clearCanvas() {
-  if (drawCtx) {
-    drawCtx.fillStyle = 'white';
-    drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-    strokes = [];
-    strokeHistory = [[]];
-  }
-  document.getElementById('handwritingResult').textContent = '';
-  
-  const preview = document.getElementById('charPreview');
-  preview.innerHTML = '';
-  for (let i = 0; i < 11; i++) {
-    preview.innerHTML += '<div class="char-box empty">?</div>';
-  }
-}
-
-// ================= AI RECOGNITION =================
-async function recognizeHandwritingAI() {
-  const resultDiv = document.getElementById('handwritingResult');
-  const recognizeBtn = document.getElementById('recognizeBtn');
-  
-  recognizeBtn.disabled = true;
-  recognizeBtn.classList.add('processing');
-  resultDiv.textContent = '🤖 AI sedang menganalisis tulisan...';
-  
-  try {
-    const chars = await segmentCharacters();
-    
-    if (chars.length < 11) {
-      resultDiv.textContent = `⚠️ Terdeteksi ${chars.length} karakter, butuh 11. Tulis lebih jelas!`;
-      recognizeBtn.disabled = false;
-      recognizeBtn.classList.remove('processing');
-      return;
-    }
-    
-    let recognized = '';
-    let totalConfidence = 0;
-    const preview = document.getElementById('charPreview');
-    preview.innerHTML = '';
-    
-    for (let i = 0; i < Math.min(chars.length, 11); i++) {
-      const charCanvas = chars[i];
-      let prediction;
-      
-      if (i === 0) {
-        prediction = await predictLetter(charCanvas);
-      } else {
-        prediction = await predictDigit(charCanvas);
-      }
-      
-      recognized += prediction.char;
-      totalConfidence += prediction.confidence;
-      
-      preview.innerHTML += `<div class="char-box">${prediction.char}<span class="char-confidence">${Math.round(prediction.confidence)}%</span></div>`;
-    }
-    
-    const avgConfidence = totalConfidence / Math.min(chars.length, 11);
-    
-    document.getElementById("serial").value = recognized;
-    document.getElementById("confidenceText").textContent = 
-      `🤖 AI Confidence: ${Math.round(avgConfidence)}% | TensorFlow.js CNN`;
-    document.getElementById("result").style.display = "block";
-    
-    if (avgConfidence >= 80) {
-      resultDiv.textContent = `✅ Sukses: ${recognized} (${Math.round(avgConfidence)}%)`;
-      showToast('✅ Handwriting berhasil dikenali!', 'success');
-    } else if (avgConfidence >= 60) {
-      resultDiv.textContent = `⚠️ ${recognized} (${Math.round(avgConfidence)}%) - Periksa kembali!`;
-      showToast('⚠️ Confidence rendah, periksa hasil!', 'warning');
-    } else {
-      resultDiv.textContent = `❌ Confidence rendah (${Math.round(avgConfidence)}%). Tulis lebih jelas!`;
-      showToast('❌ Gagal mengenali, coba lagi!', 'error');
-    }
-    
-  } catch (error) {
-    resultDiv.textContent = '❌ Gagal mengenali. Tulis lebih besar dan jelas!';
-    showToast('❌ Error: ' + error.message, 'error');
-    console.error(error);
-  }
-  
-  recognizeBtn.disabled = false;
-  recognizeBtn.classList.remove('processing');
-}
-
-async function segmentCharacters() {
-  const tempCanvas = document.createElement('canvas');
-  const tempCtx = tempCanvas.getContext('2d');
-  tempCanvas.width = drawCanvas.width;
-  tempCanvas.height = drawCanvas.height;
-  
-  tempCtx.fillStyle = 'white';
-  tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-  tempCtx.drawImage(drawCanvas, 0, 0);
-  
-  const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-  const data = imageData.data;
-  
-  const cols = tempCanvas.width;
-  const rows = tempCanvas.height;
-  const projection = new Array(cols).fill(0);
-  
-  for (let x = 0; x < cols; x++) {
-    for (let y = 0; y < rows; y++) {
-      const idx = (y * cols + x) * 4;
-      const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-      if (brightness < 200) projection[x]++;
-    }
-  }
-  
-  const threshold = rows * 0.05;
-  const segments = [];
-  let inChar = false;
-  let start = 0;
-  
-  for (let x = 0; x < cols; x++) {
-    if (projection[x] > threshold && !inChar) {
-      start = x;
-      inChar = true;
-    } else if (projection[x] <= threshold && inChar) {
-      if (x - start > 10) {
-        segments.push({start, end: x});
-      }
-      inChar = false;
-    }
-  }
-  
-  const charCanvases = [];
-  for (const seg of segments) {
-    const charCanvas = document.createElement('canvas');
-    const charCtx = charCanvas.getContext('2d');
-    
-    const width = seg.end - seg.start;
-    charCanvas.width = 28;
-    charCanvas.height = 28;
-    
-    charCtx.fillStyle = 'white';
-    charCtx.fillRect(0, 0, 28, 28);
-    
-    charCtx.drawImage(
-      tempCanvas,
-      seg.start, 0, width, rows,
-      2, 2, 24, 24
-    );
-    
-    charCanvases.push(charCanvas);
-  }
-  
-  return charCanvases;
-}
-
-async function predictLetter(charCanvas) {
-  let tensor = tf.browser.fromPixels(charCanvas, 1)
-    .resizeBilinear([28, 28])
-    .toFloat()
-    .div(255.0)
-    .expandDims(0);
-  
-  const {data} = await Tesseract.recognize(charCanvas, "eng", {
-    tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_CHAR,
-    logger: () => {}
-  });
-  
-  tensor.dispose();
-  
-  let char = normalize(data.text.charAt(0) || 'A');
-  if (!/[A-Z]/.test(char)) char = 'A';
-  
-  return {
-    char,
-    confidence: Math.min(data.confidence || 70, 95)
-  };
-}
-
-async function predictDigit(charCanvas) {
-  let tensor = tf.browser.fromPixels(charCanvas, 1)
-    .resizeBilinear([28, 28])
-    .toFloat()
-    .div(255.0)
-    .expandDims(0);
-  
-  const {data} = await Tesseract.recognize(charCanvas, "eng", {
-    tessedit_char_whitelist: "0123456789",
-    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_CHAR,
-    logger: () => {}
-  });
-  
-  tensor.dispose();
-  
-  let char = normalize(data.text.charAt(0) || '0');
-  if (!/[0-9]/.test(char)) char = '0';
-  
-  return {
-    char,
-    confidence: Math.min(data.confidence || 70, 95)
-  };
-}
-
-// ================= DATA MANAGEMENT =================
-function save() {
-  const v = document.getElementById("serial").value.toUpperCase();
-  const ok = validSerial(v);
-  
-  data.push({
-    No: no++,
-    Serial: v,
-    Status: ok ? "VALID" : "INVALID",
-    Waktu: new Date().toLocaleString("id-ID"),
-    Method: currentTab === 'camera' ? 'OCR' : 'Handwriting'
-  });
-  
-  if (CONFIG.autoSave) {
-    localStorage.setItem("scanData", JSON.stringify(data));
-  }
-  
-  stat.total++;
-  ok ? stat.valid++ : stat.invalid++;
-  render();
-  retry();
-  
-  showToast(ok ? '✅ Data VALID disimpan!' : '⚠️ Data INVALID disimpan!', ok ? 'success' : 'warning');
-}
-
-function deleteEntry(index) {
-  if (confirm('Hapus data nomor ' + data[index].No + '?')) {
-    const deleted = data.splice(index, 1)[0];
-    
-    stat.total--;
-    if (deleted.Status === "VALID") stat.valid--;
-    else stat.invalid--;
-    
-    localStorage.setItem("scanData", JSON.stringify(data));
-    render();
-    showToast('🗑️ Data dihapus', 'warning');
-  }
-}
-
-function retry() {
-  document.getElementById("result").style.display = "none";
-  document.getElementById("confidenceText").textContent = '';
-  
-  if (currentTab === 'camera') {
-    startCamera();
-  } else {
-    clearCanvas();
-  }
-}
-
-function edit() {
-  document.getElementById("serial").disabled = false;
-  document.getElementById("serial").focus();
-}
-
-// ================= FILTERS =================
-function filterData(filter) {
-  currentFilter = filter;
-  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-  event.target.classList.add('active');
-  render();
-}
-
-// ================= TABLE =================
-function render() {
-  document.getElementById("t").textContent = stat.total;
-  document.getElementById("v").textContent = stat.valid;
-  document.getElementById("i").textContent = stat.invalid;
-  
-  const tb = document.getElementById("tbody");
-  
-  let filtered = data;
-  if (currentFilter === 'valid') {
-    filtered = data.filter(d => d.Status === 'VALID');
-  } else if (currentFilter === 'invalid') {
-    filtered = data.filter(d => d.Status === 'INVALID');
-  } else if (currentFilter === 'today') {
-    const today = new Date().toLocaleDateString('id-ID');
-    filtered = data.filter(d => d.Waktu.includes(today));
-  }
-  
-  if (filtered.length === 0) {
-    tb.innerHTML = '<tr><td colspan="5" align="center">Tidak ada data</td></tr>';
-  } else {
-    tb.innerHTML = "";
-    filtered.slice(-30).reverse().forEach((d, idx) => {
-      const cls = d.Status === "VALID" ? "valid" : "invalid";
-      const actualIndex = data.indexOf(d);
-      tb.innerHTML += `<tr class="${cls}">
-        <td>${d.No}</td>
-        <td><b>${d.Serial}</b></td>
-        <td>${d.Status}</td>
-        <td style="font-size:11px">${d.Waktu}</td>
-        <td><button class="delete-btn" onclick="deleteEntry(${actualIndex})">🗑️</button></td>
-      </tr>`;
-    });
-  }
-}
-
-// ================= EXPORT =================
-function downloadExcel() {
-  if (data.length === 0) {
-    showToast('❌ Belum ada data!', 'error');
-    return;
-  }
-  
-  const valid = data.filter(d => d.Status === "VALID").map(d => d.Serial).join(",");
-  const ws = XLSX.utils.aoa_to_sheet([
-    ["Rekapitulasi Arsip Serial Scanner PRO - Ultimate Edition"],
-    [`Generated: ${new Date().toLocaleString('id-ID')}`],
-    [],
-    ["Nomor Seri Valid (CSV):"],
-    [valid],
-    [],
-    ["Detail Lengkap:"],
-    ["No", "Serial", "Status", "Waktu", "Method"],
-    ...data.map(d => [d.No, d.Serial, d.Status, d.Waktu, d.Method || 'OCR'])
-  ]);
-  
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Rekap");
-  XLSX.writeFile(wb, `Serial_Scanner_${new Date().toISOString().split('T')[0]}.xlsx`);
-  
-  showToast('📥 Excel berhasil didownload!', 'success');
-}
-
-function exportJSON() {
-  if (data.length === 0) {
-    showToast('❌ Belum ada data!', 'error');
-    return;
-  }
-  
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], {type: 'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `serial_data_${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  
-  showToast('📦 JSON berhasil diexport!', 'success');
-}
-
-// ================= INIT =================
-loadSettings();
-render();
+// Initialize on load
+updateStats();
+renderTable();
 </script>
 
 </body>
