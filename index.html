@@ -495,7 +495,7 @@ th{
 <div class="header">
   <div>
     <h2>🤖 Serial Scanner PRO <span class="ai-badge">AI ULTIMATE</span></h2>
-    <small>Format: 1 Huruf (A-Z) + 10 Angka (0-9)</small>
+    <small>King Nando gacor juga king</small>
   </div>
   <button class="settings-btn" onclick="openSettings()">⚙️</button>
 </div>
@@ -854,13 +854,15 @@ function switchTab(tab) {
 // ================= UTIL =================
 function normalize(t) {
   return t.toUpperCase()
-    .replace(/O/g, "0").replace(/[IL]/g, "1")
-    .replace(/S/g, "5").replace(/B/g, "8")
-    .replace(/[^A-Z0-9]/g, "");
+     .replace(/[OQD]/gi, "0")
+    .replace(/[IL]/gi, "1")
+    .replace(/S/gi, "5")
+    .replace(/B/gi, "8")
+    .replace(/[^0-9]/g, "");
 }
 
 function validSerial(s) {
-  return /^[A-Z]\d{10}$/.test(s);
+  return /^\d{9}$/.test(s);
 }
 
 // ================= MODE =================
@@ -999,7 +1001,7 @@ async function scan() {
     return;
   }
 
-  const m = normalize(data.text).match(/[A-Z]\d{10}/);
+  const m = normalize(data.text).match(/\d{9}/);
   if (m) scanBuffer[m[0]] = (scanBuffer[m[0]] || 0) + 1;
   scanCount++;
   
