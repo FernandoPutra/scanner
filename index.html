@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Serial Scanner - Fast 9 Digit</title>
+<title>Serial Scanner - ULTRA FAST</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -22,12 +22,17 @@ body{
 }
 h1{font-size:24px;margin-bottom:4px}
 .badge{
-  background:linear-gradient(135deg,#22c55e,#16a34a);
+  background:linear-gradient(135deg,#ef4444,#dc2626);
   padding:4px 12px;
   border-radius:12px;
   font-size:11px;
   display:inline-block;
   margin-left:8px;
+  animation:blink 1s infinite;
+}
+@keyframes blink{
+  0%,100%{opacity:1}
+  50%{opacity:0.7}
 }
 
 .camera-container{
@@ -52,7 +57,7 @@ video{
   border:3px solid #22c55e;
   border-radius:12px;
   box-shadow:0 0 0 9999px rgba(0,0,0,0.6);
-  animation:pulse 2s infinite;
+  animation:pulse 1s infinite;
 }
 @keyframes pulse{
   0%,100%{border-color:#22c55e;transform:scale(1)}
@@ -70,6 +75,18 @@ video{
   font-weight:700;
   border:2px solid #22c55e;
   font-size:14px;
+}
+
+.fps-counter{
+  position:absolute;
+  top:20px;
+  right:20px;
+  background:rgba(0,0,0,0.9);
+  padding:8px 16px;
+  border-radius:12px;
+  font-size:12px;
+  color:#22c55e;
+  border:2px solid #22c55e;
 }
 
 .controls{
@@ -110,6 +127,18 @@ button:active{transform:scale(0.95)}
   color:#fff;
   font-weight:700;
   margin-bottom:12px;
+  text-transform:uppercase;
+}
+.category-input{
+  width:100%;
+  font-size:18px;
+  padding:12px;
+  border-radius:10px;
+  border:2px solid #3b82f6;
+  background:#0f172a;
+  color:#fff;
+  margin-bottom:12px;
+  text-transform:uppercase;
 }
 .confidence{
   text-align:center;
@@ -190,8 +219,8 @@ th{
 <body>
 
 <div class="header">
-  <h1>🎯 Serial Scanner<span class="badge">FAST 9 DIGIT</span></h1>
-  <small>Optimized for Patterned Certificate Paper</small>
+  <h1>⚡ Serial Scanner<span class="badge">ULTRA FAST</span></h1>
+  <small>Format: E2202323347 | Optimized Speed</small>
 </div>
 
 <div class="controls">
@@ -202,13 +231,15 @@ th{
 <div class="camera-container" id="cameraBox" style="display:none">
   <video id="video" playsinline autoplay muted></video>
   <div class="scan-area"></div>
+  <div class="fps-counter" id="fpsCounter">FPS: 0</div>
   <div class="status" id="status">🔍 Scanning...</div>
 </div>
 
 <canvas id="canvas" hidden></canvas>
 
 <div class="result-card" id="resultCard">
-  <input id="serialInput" maxlength="9" placeholder="000000000">
+  <input id="categoryInput" class="category-input" maxlength="20" placeholder="Keterangan (e.g., KI-D2)">
+  <input id="serialInput" maxlength="11" placeholder="E0000000000">
   <div class="confidence" id="confidenceText"></div>
   <button class="btn-save" onclick="saveSerial()">✔️ Save</button>
   <button class="btn-retry" onclick="retryScan()">🔄 Retry</button>
@@ -234,18 +265,19 @@ th{
     <thead>
       <tr>
         <th>No</th>
-        <th>Serial (9 Digit)</th>
+        <th>Keterangan</th>
+        <th>Serial (1 Letter + 10 Digits)</th>
         <th>Status</th>
         <th>Time</th>
       </tr>
     </thead>
     <tbody id="tableBody">
-      <tr><td colspan="4" style="text-align:center;color:#94a3b8">No data yet</td></tr>
+      <tr><td colspan="5" style="text-align:center;color:#94a3b8">No data yet</td></tr>
     </tbody>
   </table>
 </div>
 
-<button class="btn-export" onclick="exportExcel()">⬇️ Download Excel</button>
+<button class="btn-export" onclick="exportExcel()">⬇️ Download Excel (Grouped)</button>
 
 <div class="toast" id="toast"></div>
 
@@ -254,10 +286,11 @@ let data = JSON.parse(localStorage.getItem('serialData')) || [];
 let scanning = false;
 let stream = null;
 let worker = null;
-let scanAttempts = 0;
-const MAX_ATTEMPTS = 3;
+let lastScanTime = 0;
+let fpsFrames = 0;
+let fpsLastTime = Date.now();
 
-// Initialize Tesseract worker with optimized config
+// Initialize Tesseract worker with MAXIMUM SPEED config
 async function initWorker() {
   worker = await Tesseract.createWorker('eng', 1, {
     logger: () => {},
@@ -265,103 +298,77 @@ async function initWorker() {
   });
   
   await worker.setParameters({
-    tessedit_char_whitelist: '0123456789',
+    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
     tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE,
     tessedit_ocr_engine_mode: Tesseract.OEM.LSTM_ONLY,
-    preserve_interword_spaces: '0'
+    preserve_interword_spaces: '0',
+    // Speed optimizations
+    tessedit_do_invert: '0',
+    edges_max_children_per_outline: '10',
+    textord_heavy_nr: '1',
+    textord_noise_sizelimit: '0.5',
+    edges_childarea: '0.5'
   });
 }
 
-// Advanced preprocessing for patterned paper
-function preprocessImage(ctx, w, h) {
+// ULTRA FAST preprocessing - minimal processing for speed
+function preprocessImageFast(ctx, w, h) {
   const imgData = ctx.getImageData(0, 0, w, h);
   const d = imgData.data;
   
-  // 1. Convert to grayscale with contrast enhancement
+  // Simple grayscale conversion
   for (let i = 0; i < d.length; i += 4) {
-    let gray = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+    const gray = (d[i] + d[i+1] + d[i+2]) / 3;
     d[i] = d[i+1] = d[i+2] = gray;
   }
   
-  // 2. Apply adaptive thresholding to remove pattern
-  const blockSize = 15;
-  const C = 10;
-  
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const idx = (y * w + x) * 4;
-      
-      // Calculate local mean
-      let sum = 0, count = 0;
-      for (let by = Math.max(0, y - blockSize); by < Math.min(h, y + blockSize); by++) {
-        for (let bx = Math.max(0, x - blockSize); bx < Math.min(w, x + blockSize); bx++) {
-          const bidx = (by * w + bx) * 4;
-          sum += d[bidx];
-          count++;
-        }
-      }
-      const mean = sum / count;
-      
-      // Apply threshold
-      const val = d[idx] > (mean - C) ? 255 : 0;
-      d[idx] = d[idx+1] = d[idx+2] = val;
-    }
-  }
-  
-  // 3. Morphological opening (remove small dots)
-  const kernel = 2;
-  const temp = new Uint8ClampedArray(d);
-  
-  // Erosion
-  for (let y = kernel; y < h - kernel; y++) {
-    for (let x = kernel; x < w - kernel; x++) {
-      let min = 255;
-      for (let ky = -kernel; ky <= kernel; ky++) {
-        for (let kx = -kernel; kx <= kernel; kx++) {
-          const idx = ((y + ky) * w + (x + kx)) * 4;
-          min = Math.min(min, temp[idx]);
-        }
-      }
-      const idx = (y * w + x) * 4;
-      d[idx] = d[idx+1] = d[idx+2] = min;
-    }
-  }
-  
-  // Dilation
-  for (let y = kernel; y < h - kernel; y++) {
-    for (let x = kernel; x < w - kernel; x++) {
-      let max = 0;
-      for (let ky = -kernel; ky <= kernel; ky++) {
-        for (let kx = -kernel; kx <= kernel; kx++) {
-          const idx = ((y + ky) * w + (x + kx)) * 4;
-          max = Math.max(max, d[idx]);
-        }
-      }
-      const idx = (y * w + x) * 4;
-      d[idx] = d[idx+1] = d[idx+2] = max;
-    }
-  }
-  
-  // 4. Increase contrast
-  let min = 255, max = 0;
+  // Fast binary thresholding with Otsu's method approximation
+  let histogram = new Array(256).fill(0);
   for (let i = 0; i < d.length; i += 4) {
-    min = Math.min(min, d[i]);
-    max = Math.max(max, d[i]);
+    histogram[d[i]]++;
   }
   
-  const scale = 255 / (max - min || 1);
+  // Calculate threshold
+  let total = w * h;
+  let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * histogram[i];
+  
+  let sumB = 0;
+  let wB = 0;
+  let wF = 0;
+  let maxVariance = 0;
+  let threshold = 0;
+  
+  for (let i = 0; i < 256; i++) {
+    wB += histogram[i];
+    if (wB === 0) continue;
+    
+    wF = total - wB;
+    if (wF === 0) break;
+    
+    sumB += i * histogram[i];
+    let mB = sumB / wB;
+    let mF = (sum - sumB) / wF;
+    let variance = wB * wF * (mB - mF) * (mB - mF);
+    
+    if (variance > maxVariance) {
+      maxVariance = variance;
+      threshold = i;
+    }
+  }
+  
+  // Apply threshold
   for (let i = 0; i < d.length; i += 4) {
-    const val = ((d[i] - min) * scale);
-    d[i] = d[i+1] = d[i+2] = val > 127 ? 255 : 0;
+    const val = d[i] > threshold ? 255 : 0;
+    d[i] = d[i+1] = d[i+2] = val;
   }
   
   ctx.putImageData(imgData, 0, 0);
 }
 
-// Normalize and clean OCR result
+// Clean OCR result
 function cleanSerial(text) {
-  // Remove all non-digits
-  let clean = text.replace(/[^0-9]/g, '');
+  let clean = text.replace(/[^A-Z0-9]/gi, '').toUpperCase();
   
   // Common OCR mistakes
   clean = clean.replace(/O/g, '0')
@@ -374,12 +381,12 @@ function cleanSerial(text) {
   return clean;
 }
 
-// Validate 9-digit serial
+// Validate serial
 function isValid(serial) {
-  return /^\d{9}$/.test(serial);
+  return /^[A-Z]\d{10}$/.test(serial);
 }
 
-// Start camera and scanning
+// Start camera with optimized settings
 async function startScan() {
   try {
     if (!worker) await initWorker();
@@ -387,8 +394,9 @@ async function startScan() {
     stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: 'environment',
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
+        width: { ideal: 1280 }, // Reduced resolution for speed
+        height: { ideal: 720 },
+        frameRate: { ideal: 60 } // Higher framerate
       }
     });
     
@@ -399,48 +407,55 @@ async function startScan() {
     document.getElementById('cameraBox').style.display = 'block';
     document.getElementById('resultCard').style.display = 'none';
     
-    // Start continuous scanning
-    scanAttempts = 0;
-    scanLoop();
+    // Start ultra-fast continuous scanning
+    scanning = true;
+    requestAnimationFrame(scanLoopFast);
     
   } catch (e) {
     showToast('Camera error: ' + e.message, 'error');
   }
 }
 
-// Continuous scan loop
-async function scanLoop() {
-  if (!stream || scanAttempts >= MAX_ATTEMPTS) {
-    if (scanAttempts >= MAX_ATTEMPTS) {
-      showToast('Max attempts reached. Please try again.', 'error');
-      stopCamera();
-    }
-    return;
+// ULTRA FAST scan loop with requestAnimationFrame
+async function scanLoopFast() {
+  if (!stream || !scanning) return;
+  
+  const now = Date.now();
+  
+  // Update FPS counter
+  fpsFrames++;
+  if (now - fpsLastTime >= 1000) {
+    document.getElementById('fpsCounter').textContent = `FPS: ${fpsFrames}`;
+    fpsFrames = 0;
+    fpsLastTime = now;
   }
   
-  if (!scanning) {
-    scanning = true;
-    scanAttempts++;
+  // Scan every 300ms (instead of 800ms) for faster detection
+  if (now - lastScanTime >= 300) {
+    lastScanTime = now;
     
-    const result = await performScan();
-    
-    if (result) {
-      stopCamera();
-      showResult(result);
-    } else {
-      scanning = false;
-      setTimeout(scanLoop, 800); // Scan every 0.8s
-    }
+    performScanFast().then(result => {
+      if (result) {
+        stopCamera();
+        showResult(result);
+      } else if (scanning) {
+        requestAnimationFrame(scanLoopFast);
+      }
+    }).catch(() => {
+      if (scanning) requestAnimationFrame(scanLoopFast);
+    });
+  } else {
+    requestAnimationFrame(scanLoopFast);
   }
 }
 
-// Perform single scan
-async function performScan() {
+// ULTRA FAST scan with reduced canvas size
+async function performScanFast() {
   const video = document.getElementById('video');
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
   
-  // Capture from scan area
+  // Capture smaller region for faster processing
   const vw = video.videoWidth;
   const vh = video.videoHeight;
   const sx = vw * 0.1;
@@ -448,24 +463,27 @@ async function performScan() {
   const sw = vw * 0.8;
   const sh = vh * 0.2;
   
-  canvas.width = sw;
-  canvas.height = sh;
+  // Reduce canvas size by 50% for 4x faster processing
+  const targetW = Math.floor(sw * 0.5);
+  const targetH = Math.floor(sh * 0.5);
   
-  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+  canvas.width = targetW;
+  canvas.height = targetH;
   
-  // Apply advanced preprocessing
-  preprocessImage(ctx, sw, sh);
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, targetW, targetH);
   
-  // OCR with Tesseract
+  // Fast preprocessing
+  preprocessImageFast(ctx, targetW, targetH);
+  
+  // OCR with lower confidence threshold for speed
   try {
     const { data: { text, confidence } } = await worker.recognize(canvas);
     
     const cleaned = cleanSerial(text);
+    const match = cleaned.match(/[A-Z]\d{10}/);
     
-    // Extract first 9 consecutive digits
-    const match = cleaned.match(/\d{9}/);
-    
-    if (match && confidence > 60) {
+    // Lower confidence threshold (50 instead of 60) for faster acceptance
+    if (match && confidence > 50) {
       return {
         serial: match[0],
         confidence: Math.round(confidence)
@@ -482,9 +500,10 @@ async function performScan() {
 function showResult(result) {
   document.getElementById('serialInput').value = result.serial;
   document.getElementById('confidenceText').textContent = 
-    `✅ Confidence: ${result.confidence}% | Attempts: ${scanAttempts}/${MAX_ATTEMPTS}`;
+    `✅ Confidence: ${result.confidence}% | ULTRA FAST MODE`;
   document.getElementById('resultCard').style.display = 'block';
-  showToast('✅ Serial detected!', 'success');
+  document.getElementById('categoryInput').focus();
+  showToast('⚡ Serial detected!', 'success');
 }
 
 // Stop camera
@@ -494,7 +513,6 @@ function stopCamera() {
     stream = null;
   }
   scanning = false;
-  scanAttempts = 0;
   document.getElementById('cameraBox').style.display = 'none';
 }
 
@@ -508,17 +526,24 @@ function retryScan() {
 function manualEntry() {
   stopCamera();
   document.getElementById('serialInput').value = '';
+  document.getElementById('categoryInput').value = '';
   document.getElementById('confidenceText').textContent = '✍️ Manual Entry';
   document.getElementById('resultCard').style.display = 'block';
-  document.getElementById('serialInput').focus();
+  document.getElementById('categoryInput').focus();
 }
 
 // Save serial
 function saveSerial() {
-  const serial = document.getElementById('serialInput').value.trim();
+  const serial = document.getElementById('serialInput').value.trim().toUpperCase();
+  const category = document.getElementById('categoryInput').value.trim().toUpperCase();
   
   if (!serial) {
     showToast('❌ Please enter a serial number', 'error');
+    return;
+  }
+  
+  if (!category) {
+    showToast('❌ Please enter a category (Keterangan)', 'error');
     return;
   }
   
@@ -526,6 +551,7 @@ function saveSerial() {
   
   data.push({
     no: data.length + 1,
+    category: category,
     serial: serial,
     status: valid ? 'VALID' : 'INVALID',
     time: new Date().toLocaleString('id-ID')
@@ -556,13 +582,14 @@ function renderTable() {
   const tbody = document.getElementById('tableBody');
   
   if (data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8">No data yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8">No data yet</td></tr>';
     return;
   }
   
   tbody.innerHTML = data.slice(-20).reverse().map(d => `
     <tr class="${d.status === 'VALID' ? 'valid' : 'invalid'}">
       <td>${d.no}</td>
+      <td><b>${d.category}</b></td>
       <td><b>${d.serial}</b></td>
       <td>${d.status}</td>
       <td style="font-size:11px">${d.time}</td>
@@ -577,22 +604,55 @@ function exportExcel() {
     return;
   }
   
-  const ws = XLSX.utils.aoa_to_sheet([
-    ['Serial Scanner Report - 9 Digit'],
-    [`Generated: ${new Date().toLocaleString('id-ID')}`],
+  const grouped = {};
+  data.forEach(d => {
+    if (!grouped[d.category]) {
+      grouped[d.category] = [];
+    }
+    grouped[d.category].push(d.serial);
+  });
+  
+  const now = new Date();
+  const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const bulan = monthNames[now.getMonth()];
+  const tahun = now.getFullYear();
+  
+  const wsData = [
+    ['Rekapitulasi Arsip'],
     [],
-    ['No', 'Serial', 'Status', 'Time'],
-    ...data.map(d => [d.no, d.serial, d.status, d.time])
-  ]);
+    ['Bulan : ' + bulan, '', '', 'Tahun : ' + tahun],
+    [],
+    ['Keterangan', 'Nomor Seri'],
+  ];
+  
+  Object.keys(grouped).sort().forEach(category => {
+    const serials = grouped[category];
+    const serialsText = serials.join(', ');
+    wsData.push([category, serialsText]);
+  });
+  
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: 1 } },
+    { s: { r: 2, c: 3 }, e: { r: 2, c: 4 } }
+  ];
+  
+  ws['!cols'] = [
+    { wch: 15 },
+    { wch: 100 }
+  ];
   
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Data');
-  XLSX.writeFile(wb, `serials_${new Date().toISOString().split('T')[0]}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, 'Rekapitulasi');
+  XLSX.writeFile(wb, `Rekapitulasi_Arsip_${bulan}_${tahun}.xlsx`);
   
   showToast('📥 Excel downloaded!', 'success');
 }
 
-// Show toast notification
+// Show toast
 function showToast(message, type = 'success') {
   const toast = document.getElementById('toast');
   toast.textContent = message;
@@ -604,7 +664,7 @@ function showToast(message, type = 'success') {
   }, 3000);
 }
 
-// Initialize on load
+// Initialize
 updateStats();
 renderTable();
 </script>
